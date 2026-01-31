@@ -1,90 +1,108 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse # ←ここに追加
-from fastapi.templating import Jinja2Templates
-import starlette.status as status
 import httpx
 import asyncio
+from fastapi import FastAPI, Request, Form, Query, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from starlette.status import HTTP_303_SEE_OTHER
 
-# インポートエラー対策
+# インポートの冗長性を排除し、Searchモジュールを整理
 try:
     from youtubesearchpython import Search
 except ImportError:
     from youtubesearchpython.search import Search
 
-app = FastAPI()
+app = FastAPI(title="YStube API")
 templates = Jinja2Templates(directory="templates")
 
-AUTH_COOKIE_NAME = "ys_auth"
-AUTH_SECRET_VALUE = "authenticated_user"
+# --- Configuration & Auth ---
+AUTH_COOKIE = "ys_auth"
+AUTH_VALUE = "authenticated_user"
+STREAM_API_BASE = "https://yudlp.vercel.app/stream"
 
-def is_authenticated(request: Request):
-    return request.cookies.get(AUTH_COOKIE_NAME) == AUTH_SECRET_VALUE
+def is_auth(request: Request) -> bool:
+    return request.cookies.get(AUTH_COOKIE) == AUTH_VALUE
 
-# --- Routes ---
+# --- Middlewares / Helpers ---
+def auth_required(request: Request):
+    if not is_auth(request):
+        raise HTTPException(status_code=303, headers={"Location": "/ys"})
+
+# --- View Routes ---
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    if not is_authenticated(request):
-        return RedirectResponse(url="/ys")
+    if not is_auth(request):
+        return RedirectResponse("/ys")
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/ys", response_class=HTMLResponse)
-async def ys_page(request: Request):
-    if is_authenticated(request):
-        return RedirectResponse(url="/")
-    return HTMLResponse("""
-        <form method="post">
-            <input type="password" name="passcode" placeholder="ACCESS CODE" autofocus>
-            <button type="submit">UNLOCK</button>
-        </form>
-    """)
+async def login_page(request: Request):
+    if is_auth(request):
+        return RedirectResponse("/")
+    return templates.TemplateResponse("login.html", {"request": request}) # ログインもテンプレート化を推奨
 
 @app.post("/ys")
-async def ys_verify(passcode: str = Form(...)):
+async def login_verify(passcode: str = Form(...)):
     if passcode == "yes":
-        response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-        response.set_cookie(key=AUTH_COOKIE_NAME, value=AUTH_SECRET_VALUE, httponly=True, samesite="lax")
+        response = RedirectResponse("/", status_code=HTTP_303_SEE_OTHER)
+        response.set_cookie(key=AUTH_COOKIE, value=AUTH_VALUE, httponly=True, samesite="lax")
         return response
-    return RedirectResponse(url="/ys", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse("/ys", status_code=HTTP_303_SEE_OTHER)
 
 @app.get("/search", response_class=HTMLResponse)
-async def search(request: Request, q: str = ""):
-    if not is_authenticated(request):
-        return RedirectResponse(url="/ys")
+async def search_view(request: Request, q: str = ""):
+    auth_required(request)
     if not q:
-        return RedirectResponse(url="/")
-    search_provider = Search(q, limit=20)
-    search_results = search_provider.result()
-    return templates.TemplateResponse("search.html", {"request": request, "query": q, "results": search_results.get('result', [])})
-
-@app.get("/api/search/more")
-async def search_more(q: str, offset: int = 1):
-    search_provider = Search(q, limit=20)
-    for _ in range(offset):
-        search_provider.next()
-    return search_provider.result()
-
-# --- Player & Stream ---
+        return RedirectResponse("/")
+    
+    # 検索実行
+    results = Search(q, limit=20).result()
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "query": q,
+        "results": results.get('result', [])
+    })
 
 @app.get("/watch", response_class=HTMLResponse)
-async def watch_page(request: Request, v: str = ""):
-    if not is_authenticated(request):
-        return RedirectResponse(url="/ys")
+async def watch_view(request: Request, v: str = ""):
+    auth_required(request)
+    if not v:
+        return RedirectResponse("/")
     return templates.TemplateResponse("watch.html", {"request": request, "video_id": v})
 
-@app.get("/api/stream/{video_id}")
-async def stream_video(video_id: str):
-    target_url = f"https://yudlp.vercel.app/stream/{video_id}"
-    
-    async def generate_stream():
-        # タイムアウトを長めに設定
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            async with client.stream("GET", target_url) as resp:
-                async for chunk in resp.aiter_bytes():
-                    yield chunk
+# --- API Endpoints ---
 
-    return StreamingResponse(generate_stream(), media_type="video/mp4")
+@app.get("/api/search/more")
+async def api_search_more(q: str, offset: int = 1):
+    """追加読み込み用: 指定したoffset分までnext()を回して結果を返す"""
+    search = Search(q, limit=20)
+    for _ in range(offset):
+        search.next()
+    return search.result()
+
+@app.get("/api/stream/{video_id}")
+async def api_stream_proxy(video_id: str):
+    """外部APIのJSONレスポンスをそのまま中継するプロキシ"""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            target = f"{STREAM_API_BASE}/{video_id}"
+            response = await client.get(target)
+            response.raise_for_status() # 200番台以外は例外を飛ばす
+            return response.json()
+        except Exception as e:
+            return JSONResponse(
+                status_code=502,
+                content={"error": "Upstream API Error", "detail": str(e)}
+            )
+
+# --- Error Handlers ---
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 303:
+        return RedirectResponse(url=exc.headers.get("Location"))
+    return HTMLResponse(f"<h1>{exc.status_code}</h1><p>{exc.detail}</p>", status_code=exc.status_code)
 
 @app.exception_handler(404)
-async def handler_404(request: Request, _):
-    return HTMLResponse("<body style='background:#05070a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;'><h2>404 | NOT FOUND</h2></body>", status_code=404)
+async def not_found_handler(request: Request, _):
+    return HTMLResponse("<h1>404 | NOT FOUND</h1>", status_code=404)
