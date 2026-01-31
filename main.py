@@ -5,15 +5,16 @@ from fastapi.templating import Jinja2Templates
 from starlette.status import HTTP_303_SEE_OTHER
 
 try:
-    from youtubesearchpython import Search, Video
+    from youtubesearchpython import Search
 except ImportError:
-    from youtubesearchpython.search import Search, Video
+    from youtubesearchpython.search import Search
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 AUTH_COOKIE = "ys_auth"
 AUTH_VALUE = "authenticated_user"
+DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
 
 def is_auth(request: Request) -> bool:
@@ -68,47 +69,13 @@ async def api_get_more_results(q: str, offset: int = 1):
 
 @app.get("/api/details/{video_id}")
 async def api_video_details(video_id: str):
-    try:
-        info = Video.getInfo(f"https://www.youtube.com/watch?v={video_id}")
-        
-        return {
-            "id": info.get("id"),
-            "title": info.get("title"),
-            "views": info.get("viewCount", {}).get("text", "0 回視聴") if info.get("viewCount") else "0 回視聴",
-            "relativeDate": info.get("publishDate"),
-            "likes": info.get("likeCount", {}).get("text", "0") if info.get("likeCount") else "0",
-            "thumbnail": info.get("thumbnails", [{}])[0].get("url"),
-            "author": {
-                "id": info.get("channel", {}).get("id"),
-                "name": info.get("channel", {}).get("name"),
-                "subscribers": info.get("channel", {}).get("subscribers"),
-                "thumbnail": info.get("channel", {}).get("thumbnails", [{}])[0].get("url")
-            },
-            "description": {
-                "text": info.get("description", ""),
-                "formatted": info.get("description", "").replace("\n", "<br>")
-            },
-            "Related-videos": {
-                "relatedVideos": [
-                    {
-                        "type": "video",
-                        "videoId": v.get("id"),
-                        "title": v.get("title"),
-                        "channelName": v.get("channel", {}).get("name"),
-                        "viewCountText": v.get("viewCount", {}).get("text", ""),
-                        "publishedTimeText": v.get("accessibility", {}).get("title", ""),
-                        "duration": v.get("duration"),
-                        "thumbnail": v.get("thumbnails", [{}])[0].get("url")
-                    } for v in info.get("suggestions", [])
-                ]
-            }
-        }
-    except Exception as e:
-        return JSONResponse(status_code=200, content={
-            "error": "Failed to fetch metadata",
-            "details": str(e),
-            "Related-videos": {"relatedVideos": []}
-        })
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            target_url = f"{DETAILS_API_BASE}/{video_id}?depth=1"
+            response = await client.get(target_url)
+            return response.json()
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "Details API Error", "msg": str(e)})
 
 @app.get("/api/stream/{video_id}")
 async def api_proxy_stream_json(video_id: str):
@@ -118,7 +85,7 @@ async def api_proxy_stream_json(video_id: str):
             response = await client.get(target_url)
             return response.json()
         except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "yudlp connection error"})
+            return JSONResponse(status_code=502, content={"error": "Stream API Error"})
 
 @app.exception_handler(404)
 async def error_404(request: Request, _):
