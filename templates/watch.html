@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch - YStube</title>
+    <style>
+        :root {
+            --accent: #00d4ff;
+            --bg: #05070a;
+            --panel: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-sub: rgba(255, 255, 255, 0.5);
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        header {
+            padding: 15px 5%;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            background: rgba(5, 7, 10, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo { font-size: 1.2rem; letter-spacing: 4px; text-decoration: none; color: white; }
+
+        /* Main Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 350px; /* メイン | サイド(関連動画) */
+            gap: 24px;
+        }
+
+        /* Player Section */
+        .main-content { overflow: hidden; }
+        
+        #video-viewport {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+
+        .v-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 12px; }
+
+        /* Meta Info Panel */
+        .meta-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .channel-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .c-icon { width: 45px; height: 45px; border-radius: 50%; background: #222; object-fit: cover; }
+        .c-name { font-weight: bold; flex: 1; }
+
+        .stats { display: flex; gap: 20px; font-size: 0.9rem; color: var(--text-sub); border-top: 1px solid var(--border); padding-top: 15px; }
+        .stats b { color: var(--accent); }
+
+        /* Comments Section */
+        .comments-section { margin-top: 40px; }
+        .comment-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .comment-text { font-size: 0.95rem; line-height: 1.5; margin-top: 4px; }
+
+        /* Sidebar (Related Videos) */
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+        .related-item {
+            display: flex;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .r-thumb { width: 140px; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: #222; }
+        .r-info { flex: 1; }
+        .r-title { font-size: 0.9rem; font-weight: 500; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .r-meta { font-size: 0.8rem; color: var(--text-sub); display: flex; align-items: center; gap: 6px; }
+        .r-c-icon { width: 16px; height: 16px; border-radius: 50%; }
+
+        @media (max-width: 1000px) {
+            .container { grid-template-columns: 1fr; }
+            .sidebar { margin-top: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<header><a href="/" class="logo">YS</a></header>
+
+<div class="container">
+    <main class="main-content">
+        <div id="video-viewport">
+            </div>
+
+        <h1 class="v-title" id="v-title">Loading...</h1>
+
+        <div class="meta-panel">
+            <div class="channel-info">
+                <img src="" class="c-icon" id="c-icon">
+                <span class="c-name" id="c-name">---</span>
+                <div style="color:var(--accent); font-size:0.8rem; border:1px solid var(--accent); padding:2px 8px; border-radius:4px;">SUBSCRIBE</div>
+            </div>
+            <div class="stats">
+                <span>Views: <b id="v-views">0</b></span>
+                <span>Likes: <b id="v-likes">0</b></span>
+            </div>
+        </div>
+
+        <div class="comments-section">
+            <h3>Comments</h3>
+            <div id="comments-list">
+                </div>
+        </div>
+    </main>
+
+    <aside class="sidebar">
+        <h3>Related</h3>
+        <div id="related-list">
+            </div>
+    </aside>
+</div>
+
+<script>
+    const videoId = "{{ video_id }}";
+
+    async function loadData() {
+        try {
+            const res = await fetch(`/api/stream/${videoId}`);
+            const data = await res.json();
+
+            // 基本情報
+            document.getElementById('v-title').innerText = data.title || 'No Title';
+            document.getElementById('v-views').innerText = data.views || '0';
+            document.getElementById('v-likes').innerText = data.likes || '0';
+            document.getElementById('c-name').innerText = data.channel?.name || 'Unknown';
+            document.getElementById('c-icon').src = data.channel?.icon || '';
+
+            // コメント
+            const commList = document.getElementById('comments-list');
+            if (data.comments) {
+                commList.innerHTML = data.comments.map(c => `
+                    <div class="comment-item">
+                        <img src="${c.authorIcon}" class="c-icon" style="width:32px; height:32px;">
+                        <div>
+                            <div style="font-weight:bold; font-size:0.85rem;">${c.authorName}</div>
+                            <div class="comment-text">${c.text}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 関連動画
+            const relList = document.getElementById('related-list');
+            if (data.related) {
+                relList.innerHTML = data.related.map(r => `
+                    <a href="/watch?v=${r.id}" class="related-item">
+                        <img src="${r.thumbnail}" class="r-thumb">
+                        <div class="r-info">
+                            <div class="r-title">${r.title}</div>
+                            <div class="r-meta">
+                                <img src="${r.channelIcon}" class="r-c-icon">
+                                <span>${r.channelName}</span>
+                            </div>
+                            <div class="r-meta" style="margin-top:2px;">${r.views} views</div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+        } catch (e) {
+            console.error("Failed to load stream data:", e);
+        }
+    }
+
+    loadData();
+</script>
+
+</body>
+</html>
