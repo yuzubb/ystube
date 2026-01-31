@@ -1,8 +1,19 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from youtubesearchpython import AsyncSearch
 import starlette.status as status
+import os
+
+# ライブラリのインポートエラーを物理的に回避する
+try:
+    from youtubesearchpython import Search
+except ImportError:
+    # 構造的にパスが通っていない場合、内部ディレクトリから直接取得を試みる
+    try:
+        from youtubesearchpython.search import Search
+    except ImportError:
+        # 最終手段（環境により異なるため）
+        Search = None
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -26,19 +37,10 @@ async def index(request: Request):
 async def ys_page(request: Request):
     if is_authenticated(request):
         return RedirectResponse(url="/")
-    # ログイン画面のデザイン（簡易版）
     return HTMLResponse("""
-        <style>
-            body { background: #05070a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0; }
-            form { text-align: center; background: rgba(255,255,255,0.05); padding: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
-            input { background: transparent; border: 1px solid #00d4ff; padding: 12px; color: white; border-radius: 8px; outline: none; width: 200px; margin-bottom: 20px; display: block; }
-            button { background: #00d4ff; border: none; padding: 10px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-            button:hover { opacity: 0.8; box-shadow: 0 0 15px #00d4ff; }
-        </style>
         <form method="post">
-            <h2 style="font-weight:200; letter-spacing:5px;">YSTUBE</h2>
-            <input type="password" name="passcode" placeholder="Passcode" autofocus>
-            <button type="submit">ENTER</button>
+            <input type="password" name="passcode" placeholder="ACCESS CODE" autofocus>
+            <button type="submit">UNLOCK</button>
         </form>
     """)
 
@@ -46,6 +48,7 @@ async def ys_page(request: Request):
 async def ys_verify(passcode: str = Form(...)):
     if passcode == "yes":
         response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        # samesite=Lax は開発環境・本番環境両方で安定します
         response.set_cookie(key=AUTH_COOKIE_NAME, value=AUTH_SECRET_VALUE, httponly=True, samesite="lax")
         return response
     return RedirectResponse(url="/ys", status_code=status.HTTP_303_SEE_OTHER)
@@ -58,23 +61,25 @@ async def search(request: Request, q: str = ""):
     if not q:
         return RedirectResponse(url="/")
 
-    # AsyncSearchを使用（httpxの引数エラーを回避しやすい）
-    search_provider = AsyncSearch(q, limit=20)
-    search_results = await search_provider.result()
-    
-    return templates.TemplateResponse("search.html", {
-        "request": request,
-        "query": q,
-        "results": search_results.get('result', [])
-    })
+    if Search is None:
+        return HTMLResponse("Search module not found. Check requirements.", status_code=500)
+
+    try:
+        # Search(q) は内部で同期通信を行うが、
+        # httpx==0.24.1 を使っていれば proxies エラーは出ない
+        search_provider = Search(q, limit=20)
+        search_results = search_provider.result()
+        
+        return templates.TemplateResponse("search.html", {
+            "request": request,
+            "query": q,
+            "results": search_results.get('result', [])
+        })
+    except Exception as e:
+        return HTMLResponse(f"Search Error: {str(e)}", status_code=500)
 
 # --- Error Handlers ---
 
 @app.exception_handler(404)
 async def handler_404(request: Request, _):
-    return HTMLResponse("<body style='background:#05070a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;'><h1>404 | Not Found</h1></body>", status_code=404)
-
-# 定義されていないすべてのルートを404へ
-@app.api_route("/{path_name:path}", methods=["GET", "POST"])
-async def catch_all(request: Request, path_name: str):
-    raise HTTPException(status_code=404)
+    return HTMLResponse("<body style='background:#05070a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;'><h2 style='font-weight:200;letter-spacing:5px;'>404 | NOT FOUND</h2></body>", status_code=404)
