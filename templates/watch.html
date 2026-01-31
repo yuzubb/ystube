@@ -22,102 +22,78 @@
             overflow-x: hidden;
         }
 
-        /* Responsive Layout Overhaul */
         .container {
             max-width: 1400px; margin: 0 auto;
-            display: flex; flex-direction: column; gap: 0;
+            display: flex; flex-direction: column;
         }
 
         @media (min-width: 1001px) {
-            .container {
-                display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 20px;
-            }
+            .container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 20px; }
         }
 
-        /* Player - Mobile First */
+        /* Video Section */
         .player-wrapper {
             position: sticky; top: 0; z-index: 100; background: var(--bg); width: 100%;
         }
-
-        @media (min-width: 1001px) {
-            .player-wrapper { position: static; }
-        }
+        @media (min-width: 1001px) { .player-wrapper { position: static; } }
 
         #video-viewport {
             width: 100%; aspect-ratio: 16/9; background: #000;
             overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-
-        @media (min-width: 1001px) {
-            #video-viewport { border-radius: 12px; margin-bottom: 12px; }
-        }
+        @media (min-width: 1001px) { #video-viewport { border-radius: 12px; margin-bottom: 12px; } }
 
         video { width: 100%; height: 100%; display: block; }
 
-        /* Content Padding for Mobile */
+        /* Content Area */
         .main-info, aside { padding: 12px; }
-        @media (min-width: 1001px) {
-            .main-info, aside { padding: 0; }
-        }
+        @media (min-width: 1001px) { .main-info, aside { padding: 0; } }
 
-        .v-title { 
-            font-size: clamp(1.1rem, 4vw, 1.3rem); 
-            font-weight: bold; margin: 10px 0; line-height: 1.4; 
-        }
+        .v-title { font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: bold; margin: 10px 0; line-height: 1.4; }
 
-        /* Scrollable Quality Bar */
+        /* Quality Bar */
         .q-bar { 
             display: flex; gap: 8px; margin-bottom: 15px; 
-            overflow-x: auto; -webkit-overflow-scrolling: touch;
-            padding-bottom: 5px; scrollbar-width: none; 
+            overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; 
         }
         .q-bar::-webkit-scrollbar { display: none; }
-        
         .q-btn {
             background: var(--panel); border: 1px solid var(--border); color: white;
-            padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; 
-            white-space: nowrap; transition: 0.2s;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
         }
-        .q-btn.active { background: white; color: black; font-weight: bold; border-color: white; }
+        .q-btn.active { background: white; color: black; font-weight: bold; }
 
-        /* Meta Info Section */
+        /* Meta Panels */
         .author-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #222; }
+        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
         .c-info { flex: 1; min-width: 0; }
-        .c-name { font-weight: bold; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .c-name { font-weight: bold; font-size: 0.95rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .c-subs { font-size: 0.8rem; color: var(--text-sub); }
 
-        .sub-btn {
-            background: white; color: black; border: none; 
-            padding: 8px 16px; border-radius: 20px; font-weight: bold; 
-            cursor: pointer; font-size: 0.85rem;
-        }
-
         .meta-container { background: var(--panel); border-radius: 12px; padding: 12px; margin-bottom: 20px; }
-        .stats-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; color: var(--text-main); }
-        .description { 
-            font-size: 0.85rem; line-height: 1.5; color: #f1f1f1; 
-            white-space: pre-wrap; word-break: break-all;
-        }
+        .stats-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; }
+        .description { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
 
-        /* Related Videos - Modern List */
-        .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; }
-        .related-item {
-            display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 12px;
-            transition: opacity 0.2s;
-        }
-        .related-item:active { opacity: 0.6; }
-
+        /* Related List */
+        .related-item { display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 12px; }
         .r-thumb-wrap { position: relative; width: 40%; max-width: 160px; flex-shrink: 0; }
         .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: #222; }
-        .r-duration {
+        
+        /* Badges */
+        .badge {
             position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
-            padding: 2px 4px; border-radius: 4px; font-size: 0.65rem; color: white;
+            padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
         }
-        .r-info { flex: 1; min-width: 0; }
-        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; line-height: 1.2; }
-        .r-meta { font-size: 0.75rem; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .playlist-overlay {
+            position: absolute; top: 0; right: 0; bottom: 0; width: 35%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-top-right-radius: 8px; border-bottom-right-radius: 8px;
+        }
 
+        .r-info { flex: 1; min-width: 0; }
+        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; margin-bottom: 4px; }
+        .r-meta { font-size: 0.75rem; color: var(--text-sub); }
     </style>
 </head>
 <body>
@@ -131,7 +107,6 @@
 
     <main class="main-info">
         <h1 class="v-title" id="v-title">Loading...</h1>
-        
         <div class="q-bar" id="q-bar"></div>
 
         <div class="author-row">
@@ -140,94 +115,95 @@
                 <span id="c-name" class="c-name">---</span>
                 <span id="c-subs" class="c-subs">--- subscribers</span>
             </div>
-            <button class="sub-btn">Subscribe</button>
         </div>
 
         <div class="meta-container">
             <div class="stats-row">
-                <span id="v-views">--</span> views • <span id="v-date">--</span> • 👍 <span id="v-likes">--</span>
+                <span id="v-views">--</span> • <span id="v-date">--</span> • 👍 <span id="v-likes">--</span>
             </div>
             <div id="v-desc" class="description"></div>
         </div>
     </main>
 
-    <aside>
-        <div class="section-title">Related videos</div>
-        <div id="related-box"></div>
-    </aside>
+    <aside id="related-box">
+        </aside>
 </div>
 
 <script>
     const vId = "{{ video_id }}";
     const video = document.getElementById('main-video');
 
-    async function loadPage() {
+    async function init() {
         try {
-            // Meta Fetch
-            const detailRes = await fetch(`/api/details/${vId}`);
-            const detail = await detailRes.json();
+            // 1. Details Fetch
+            const res = await fetch(`/api/details/${vId}`);
+            const data = await res.json();
 
-            document.getElementById('v-title').innerText = detail.title;
-            document.getElementById('v-views').innerText = detail.views;
-            document.getElementById('v-date').innerText = detail.relativeDate;
-            document.getElementById('v-likes').innerText = detail.likes;
-            document.getElementById('c-name').innerText = detail.author.name;
-            document.getElementById('c-subs').innerText = detail.author.subscribers;
-            document.getElementById('c-icon').src = detail.author.thumbnail;
-            document.getElementById('v-desc').innerText = detail.description.text;
+            document.getElementById('v-title').innerText = data.title;
+            document.getElementById('v-views').innerText = data.views;
+            document.getElementById('v-date').innerText = data.relativeDate;
+            document.getElementById('v-likes').innerText = data.likes;
+            document.getElementById('c-name').innerText = data.author.name;
+            document.getElementById('c-subs').innerText = data.author.subscribers;
+            document.getElementById('c-icon').src = data.author.thumbnail;
+            document.getElementById('v-desc').innerText = data.description.text;
 
-            if (detail["Related-videos"] && detail["Related-videos"].relatedVideos) {
-                document.getElementById('related-box').innerHTML = detail["Related-videos"].relatedVideos.map(rv => `
-                    <a href="/watch?v=${rv.videoId}" class="related-item">
-                        <div class="r-thumb-wrap">
-                            <img src="${rv.thumbnail}" class="r-thumb" loading="lazy">
-                            <span class="r-duration">${rv.duration}</span>
-                        </div>
-                        <div class="r-info">
-                            <div class="r-title">${rv.title}</div>
-                            <div class="r-meta">${rv.channelName}</div>
-                            <div class="r-meta">${rv.viewCountText}</div>
-                        </div>
-                    </a>
-                `).join('');
+            // Related Videos Logic (Conditional Rendering)
+            if (data["Related-videos"]) {
+                const box = document.getElementById('related-box');
+                box.innerHTML = `<div class="section-title" style="font-weight:bold; margin-bottom:15px;">Related</div>` + 
+                data["Related-videos"].relatedVideos.map(rv => {
+                    const isPL = rv.type === "playlist";
+                    return `
+                        <a href="/watch?v=${rv.videoId}${isPL ? '&list='+rv.playlistId : ''}" class="related-item">
+                            <div class="r-thumb-wrap">
+                                <img src="${rv.thumbnail}" class="r-thumb">
+                                ${isPL ? `
+                                    <div class="playlist-overlay">
+                                        <span style="font-size:12px;">☰</span>
+                                    </div>
+                                ` : `
+                                    <span class="badge">${rv.duration}</span>
+                                `}
+                            </div>
+                            <div class="r-info">
+                                <div class="r-title">${rv.title}</div>
+                                ${!isPL ? `
+                                    <div class="r-meta">${rv.channelName}</div>
+                                    <div class="r-meta">${rv.viewCountText}</div>
+                                ` : `
+                                    <div class="r-meta" style="color:var(--accent);">PLAYLIST</div>
+                                `}
+                            </div>
+                        </a>
+                    `;
+                }).join('');
             }
 
-            // Stream Fetch
-            const streamRes = await fetch(`/api/stream/${vId}`);
-            const streamData = await streamRes.json();
-
-            if (streamData.formats) {
+            // 2. Stream Fetch
+            const sRes = await fetch(`/api/stream/${vId}`);
+            const sData = await sRes.json();
+            if (sData.formats) {
                 const qBar = document.getElementById('q-bar');
-                const videoFormats = streamData.formats.filter(f => f.resolution !== "audio only");
-                
-                videoFormats.forEach(f => {
-                    const btn = document.createElement('button');
-                    btn.className = 'q-btn';
-                    if (f.itag === "18") btn.classList.add('active');
-                    btn.innerText = f.resolution;
-                    
-                    btn.onclick = () => {
-                        const time = video.currentTime;
-                        document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        video.src = f.url;
-                        video.currentTime = time;
-                        video.play();
+                const vFmts = sData.formats.filter(f => f.resolution !== "audio only");
+                vFmts.forEach(f => {
+                    const b = document.createElement('button');
+                    b.className = 'q-btn' + (f.itag === "18" ? " active" : "");
+                    b.innerText = f.resolution;
+                    b.onclick = () => {
+                        const t = video.currentTime;
+                        document.querySelectorAll('.q-btn').forEach(btn => btn.classList.remove('active'));
+                        b.classList.add('active');
+                        video.src = f.url; video.currentTime = t; video.play();
                     };
-                    qBar.appendChild(btn);
+                    qBar.appendChild(b);
                 });
-
-                const itag18 = videoFormats.find(f => f.itag === "18") || videoFormats[0];
-                if (itag18) video.src = itag18.url;
+                const def = vFmts.find(f => f.itag === "18") || vFmts[0];
+                if (def) video.src = def.url;
             }
-
-        } catch (err) {
-            console.error("Load failed:", err);
-        }
+        } catch (e) { console.error(e); }
     }
-
-    loadPage();
+    init();
 </script>
-
 </body>
 </html>
