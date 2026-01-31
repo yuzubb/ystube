@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ query }} - YStube</title>
     <style>
         :root {
@@ -10,40 +10,44 @@
             --bg: #05070a;
             --panel: rgba(255, 255, 255, 0.05);
             --border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-sub: rgba(255, 255, 255, 0.5);
         }
 
         body {
             margin: 0;
             background-color: var(--bg);
-            color: white;
+            color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Header */
+        /* --- Header: Fixed & Glassmorphism --- */
         header {
-            padding: 12px 5%;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: rgba(5, 7, 10, 0.9);
-            backdrop-filter: blur(15px);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
+            background: rgba(5, 7, 10, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
         }
 
-        .logo-link {
+        .logo {
             font-size: 1.2rem;
             font-weight: 200;
             letter-spacing: 4px;
             text-decoration: none;
-            color: white;
-            text-transform: uppercase;
+            color: #fff;
+            flex-shrink: 0;
         }
 
-        .search-wrapper {
+        .search-container {
             flex: 1;
             max-width: 600px;
             position: relative;
@@ -53,134 +57,201 @@
             width: 100%;
             background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 15px;
-            color: white;
-            font-size: 1rem;
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: #fff;
+            font-size: 16px; /* モバイルのズーム防止 */
             outline: none;
+            transition: 0.3s;
             box-sizing: border-box;
         }
 
-        .search-input:focus { border-color: var(--accent); }
+        .search-input:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+        }
 
         /* Suggestions */
         #suggestions {
             position: absolute;
-            top: 100%; left: 0; right: 0;
+            top: calc(100% + 8px);
+            left: 0; right: 0;
             background: #0f1218;
             border: 1px solid var(--border);
-            border-radius: 0 0 12px 12px;
+            border-radius: 12px;
             list-style: none;
-            padding: 5px 0; margin: 0;
+            padding: 8px 0;
+            margin: 0;
             display: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
 
         #suggestions li {
-            padding: 10px 15px;
+            padding: 12px 16px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            color: var(--text-sub);
         }
 
-        #suggestions li:hover { background: rgba(255,255,255,0.05); color: var(--accent); }
+        #suggestions li:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent);
+        }
 
-        /* Results List */
-        .results-list {
-            max-width: 1100px;
+        /* --- Main Content Grid --- */
+        .content-area {
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px 5%;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            padding: 20px;
         }
 
+        .results-grid {
+            display: grid;
+            gap: 24px;
+            /* デフォルト：スマホは1列 */
+            grid-template-columns: 1fr;
+        }
+
+        /* Result Item */
         .item {
-            display: flex;
-            gap: 20px;
             text-decoration: none;
             color: inherit;
-            padding: 8px;
-            border-radius: 12px;
-            transition: background 0.2s;
+            display: flex;
+            flex-direction: column; /* スマホは縦並び */
+            gap: 12px;
+            background: transparent;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: 0.3s;
         }
 
-        .item:hover { background: rgba(255,255,255,0.03); }
-
-        .thumb-area {
+        .thumb-box {
             position: relative;
-            flex-shrink: 0;
-            width: 240px;
+            width: 100%;
             aspect-ratio: 16 / 9;
+            background: #111;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
         }
 
         .thumb-img {
-            width: 100%; height: 100%;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 10px;
-            background: #111;
+            transition: transform 0.5s;
         }
 
-        /* チャンネル用の丸いサムネイル */
-        .type-channel .thumb-area { width: 140px; margin: 0 50px; }
-        .type-channel .thumb-img { border-radius: 50%; aspect-ratio: 1/1; }
+        .item:hover .thumb-img { transform: scale(1.05); }
 
         .badge {
             position: absolute;
             bottom: 8px; right: 8px;
             background: rgba(0,0,0,0.8);
-            padding: 2px 6px;
+            color: #fff;
+            padding: 3px 6px;
             border-radius: 4px;
             font-size: 0.75rem;
+            font-weight: bold;
         }
 
-        .info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .title { font-size: 1.15rem; margin-bottom: 6px; font-weight: 500; }
-        .meta { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
-
-        @media (max-width: 700px) {
-            .item { flex-direction: column; }
-            .thumb-area { width: 100%; }
-            .type-channel .thumb-area { width: 120px; margin: 0; }
+        .info { padding: 4px; }
+        .title {
+            font-size: 1rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
+
+        .meta {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* --- Media Queries (Tablet & PC) --- */
+
+        /* タブレット: 2列 */
+        @media (min-width: 768px) {
+            .results-grid { grid-template-columns: repeat(2, 1fr); }
+            .title { font-size: 1.1rem; }
+        }
+
+        /* PC: 3列または4列 (好みに合わせて調節可) */
+        @media (min-width: 1200px) {
+            .results-grid { grid-template-columns: repeat(3, 1fr); }
+            .item {
+                flex-direction: row; /* PCは横並びリスト形式に変更 */
+                gap: 20px;
+                padding: 10px;
+            }
+            .item:hover { background: rgba(255, 255, 255, 0.03); }
+            .thumb-box { width: 320px; flex-shrink: 0; }
+            .info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+            .title { font-size: 1.2rem; -webkit-line-clamp: 3; }
+        }
+
+        /* チャンネルアイテムの特殊処理 */
+        .type-channel .thumb-box {
+            aspect-ratio: 1/1;
+            width: 120px;
+            margin: 0 auto;
+            border-radius: 50%;
+        }
+        @media (min-width: 1200px) {
+            .type-channel .thumb-box { margin: 0 100px; }
+        }
+
     </style>
 </head>
 <body>
 
 <header>
-    <a href="/" class="logo-link">YS</a>
-    <div class="search-wrapper">
+    <a href="/" class="logo">YS</a>
+    <div class="search-container">
         <form action="/search" method="GET" id="search-form">
-            <input type="text" name="q" id="search-input" class="search-input" value="{{ query }}" autocomplete="off">
+            <input type="text" name="q" id="search-input" class="search-input" value="{{ query }}" placeholder="Search..." autocomplete="off">
         </form>
         <ul id="suggestions"></ul>
     </div>
-</header>
+    <div style="width:40px;"></div> </header>
 
-<main class="results-list">
-    {% for item in results %}
-    <a href="{{ item.link }}" class="item type-{{ item.type }}" target="_blank">
-        <div class="thumb-area">
-            <img src="{{ item.thumbnails[0].url if item.thumbnails else '' }}" class="thumb-img">
-            {% if item.type == "playlist" %}
-                <div class="badge">{{ item.videoCount }} VIDEOS</div>
-            {% elif item.type == "video" and item.duration %}
-                <div class="badge">{{ item.duration }}</div>
-            {% endif %}
-        </div>
-        <div class="info">
-            <div class="title">{{ item.title }}</div>
-            <div class="meta">
-                {% if item.type == "channel" %}
-                    {{ item.subscribers or "登録者数非公開" }} • チャンネル
-                {% elif item.type == "playlist" %}
-                    {{ item.channel.name }} • プレイリスト
-                {% else %}
-                    {{ item.channel.name }} • {{ item.viewCount.short if item.viewCount else "再生数不明" }} • {{ item.publishedTime }}
+<main class="content-area">
+    <div class="results-grid">
+        {% for item in results %}
+        <a href="{{ item.link }}" class="item type-{{ item.type }}" target="_blank">
+            <div class="thumb-box">
+                <img src="{{ item.thumbnails[0].url if item.thumbnails else '' }}" class="thumb-img" loading="lazy">
+                {% if item.type == "playlist" %}
+                    <div class="badge">PLAYLIST ({{ item.videoCount }})</div>
+                {% elif item.type == "video" and item.duration %}
+                    <div class="badge">{{ item.duration }}</div>
                 {% endif %}
             </div>
-        </div>
-    </a>
-    {% endfor %}
+            <div class="info">
+                <div class="title">{{ item.title }}</div>
+                <div class="meta">
+                    <span>{{ item.channel.name }}</span>
+                    {% if item.type == "video" %}
+                        <span>•</span>
+                        <span>{{ item.viewCount.short if item.viewCount else "Views unknown" }}</span>
+                        <span>•</span>
+                        <span>{{ item.publishedTime }}</span>
+                    {% elif item.type == "channel" %}
+                        <span>•</span>
+                        <span>{{ item.subscribers or "Subscribers hidden" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
 </main>
 
 <script>
@@ -217,7 +288,7 @@
     });
 
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search-wrapper')) list.style.display = 'none';
+        if (!e.target.closest('.search-container')) list.style.display = 'none';
     });
 </script>
 
