@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import starlette.status as status
 import asyncio
+import httpx
 
 # インポートエラー対策
 try:
@@ -61,7 +62,13 @@ async def search(request: Request, q: str = ""):
         "results": search_results.get('result', [])
     })
 
-# --- 追加読み込み用API ---
+@app.get("/watch", response_class=HTMLResponse)
+async def watch_page(request: Request, v: str = ""):
+    if not is_authenticated(request):
+        return RedirectResponse(url="/ys")
+    return templates.TemplateResponse("watch.html", {"request": request, "video_id": v})
+    
+# --- API ---
 @app.get("/api/search/more")
 async def search_more(q: str, offset: int = 1):
     # offsetの分だけ next() を呼び出して次のページへ進む
@@ -69,6 +76,23 @@ async def search_more(q: str, offset: int = 1):
     for _ in range(offset):
         search_provider.next()
     return search_provider.result()
+
+@app.get("/api/stream/{video_id}")
+async def stream_video(video_id: str):
+    target_url = f"https://yudlp.vercel.app/stream/{video_id}"
+    
+    async def generate_stream():
+        async with httpx.AsyncClient() as client:
+            async with client.stream("GET", target_url) as resp:
+                if resp.status_code != 200:
+                    yield b"Error: Unable to fetch stream"
+                    return
+                
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+
+    return StreamingResponse(generate_stream(), media_type="video/mp4")
+
 
 @app.exception_handler(404)
 async def handler_404(request: Request, _):
