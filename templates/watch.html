@@ -3,129 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch - YStube</title>
+    <title>YStube</title>
     <style>
         :root {
             --accent: #00d4ff;
             --bg: #05070a;
             --panel: rgba(255, 255, 255, 0.05);
             --border: rgba(255, 255, 255, 0.1);
-            --text-sub: rgba(255, 255, 255, 0.5);
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
         }
 
         body {
-            margin: 0; background: var(--bg); color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; background: var(--bg); color: var(--text-main);
+            font-family: "YouTube Sans", "Roboto", sans-serif;
         }
 
-        /* Layout */
         .container {
-            max-width: 1300px; margin: 0 auto; padding: 20px;
-            display: grid; grid-template-columns: 1fr 350px; gap: 24px;
+            max-width: 1280px; margin: 0 auto; padding: 20px;
+            display: grid; grid-template-columns: 1fr 380px; gap: 24px;
         }
 
-        /* Player Area */
-        .player-section { width: 100%; }
+        /* Player Section */
         #video-viewport {
             width: 100%; aspect-ratio: 16/9; background: #000;
-            border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-            margin-bottom: 15px;
+            border-radius: 12px; overflow: hidden; margin-bottom: 12px;
         }
-        video { width: 100%; height: 100%; outline: none; }
+        video { width: 100%; height: 100%; }
 
-        /* Quality Selector */
-        .quality-bar {
-            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
-            padding: 10px; background: var(--panel); border-radius: 8px;
-        }
+        .v-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; line-height: 1.4; }
+
+        /* Quality Select */
+        .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
         .q-btn {
-            background: transparent; border: 1px solid var(--border); color: white;
-            padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
-            transition: 0.2s;
+            background: var(--panel); border: 1px solid var(--border); color: white;
+            padding: 6px 14px; border-radius: 18px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
         }
-        .q-btn:hover { border-color: var(--accent); }
-        .q-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+        .q-btn.active { background: white; color: black; font-weight: bold; }
 
-        /* Meta Info */
-        .v-title { font-size: 1.25rem; margin: 15px 0; font-weight: 600; line-height: 1.4; }
-        .channel-row {
-            display: flex; align-items: center; gap: 12px; padding: 15px 0;
-            border-bottom: 1px solid var(--border); margin-bottom: 20px;
+        /* Author & Stats */
+        .meta-container { background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+        .author-row { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .c-info { flex: 1; }
+        .c-name { font-weight: bold; font-size: 1rem; display: block; }
+        .c-subs { font-size: 0.8rem; color: var(--text-sub); }
+
+        .stats-row { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: var(--text-main); }
+        .description { 
+            font-size: 0.9rem; line-height: 1.5; color: var(--text-main); 
+            white-space: pre-wrap; word-break: break-all;
         }
-        .c-icon { width: 48px; height: 48px; border-radius: 50%; background: #222; }
-        .c-details { flex: 1; }
-        .c-name { font-weight: bold; display: block; }
-        .v-stats { font-size: 0.85rem; color: var(--text-sub); }
 
-        /* Comments & Sidebar */
-        .section-title { font-size: 1.1rem; margin-bottom: 15px; border-left: 3px solid var(--accent); padding-left: 10px; }
-        .comment-item { display: flex; gap: 12px; margin-bottom: 18px; font-size: 0.9rem; }
+        /* Related Videos */
+        .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; }
         .related-item {
-            display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 15px;
+            display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 12px;
         }
-        .r-thumb { width: 140px; aspect-ratio: 16/9; border-radius: 6px; object-fit: cover; }
-        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .r-thumb-wrap { position: relative; width: 160px; flex-shrink: 0; }
+        .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; }
+        .r-duration {
+            position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
+            padding: 2px 4px; border-radius: 4px; font-size: 0.7rem;
+        }
+        .r-title { font-size: 0.9rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; }
+        .r-meta { font-size: 0.75rem; color: var(--text-sub); }
 
         @media (max-width: 1000px) {
             .container { grid-template-columns: 1fr; }
+            .r-thumb-wrap { width: 120px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="player-section">
+    <main>
         <div id="video-viewport">
             <video id="main-video" controls autoplay playsinline></video>
         </div>
 
-        <div class="quality-bar" id="quality-bar">
-            </div>
+        <div class="q-bar" id="q-bar"></div>
 
         <h1 class="v-title" id="v-title">Loading...</h1>
 
-        <div class="channel-row">
-            <img src="" class="c-icon" id="c-icon">
-            <div class="c-details">
-                <span class="c-name" id="c-name">---</span>
-                <div class="v-stats">
-                    Views: <span id="v-views">-</span> • Likes: <span id="v-likes">-</span>
-                </div>
+        <div class="author-row">
+            <img id="c-icon" src="" class="c-icon">
+            <div class="c-info">
+                <span id="c-name" class="c-name">---</span>
+                <span id="c-subs" class="c-subs">--- subscribers</span>
             </div>
+            <button style="background:white; color:black; border:none; padding:8px 16px; border-radius:20px; font-weight:bold; cursor:pointer;">Subscribe</button>
         </div>
 
-        <div class="section-title">Comments</div>
-        <div id="comments-box"></div>
-    </div>
+        <div class="meta-container">
+            <div class="stats-row">
+                <span id="v-views">--</span> views • <span id="v-date">--</span> • 👍 <span id="v-likes">--</span>
+            </div>
+            <div id="v-desc" class="description"></div>
+        </div>
+    </main>
 
-    <aside class="sidebar">
-        <div class="section-title">Related</div>
+    <aside>
+        <div class="section-title">Related videos</div>
         <div id="related-box"></div>
     </aside>
 </div>
 
 <script>
-    const videoId = "{{ video_id }}";
-    const videoEl = document.getElementById('main-video');
+    const vId = "{{ video_id }}";
+    const video = document.getElementById('main-video');
 
-    async function init() {
+    async function loadPage() {
         try {
-            const res = await fetch(`/api/stream/${videoId}`);
-            const data = await res.json();
+            // 1. メタデータの読み込み (duckdns API)
+            const detailRes = await fetch(`/api/details/${vId}`);
+            const detail = await detailRes.json();
 
-            // 1. メタデータのセット
-            document.title = data.title + " - YStube";
-            document.getElementById('v-title').innerText = data.title;
-            document.getElementById('v-views').innerText = data.views || "0";
-            document.getElementById('v-likes').innerText = data.likes || "0";
-            document.getElementById('c-name').innerText = data.channel?.name || "Unknown Channel";
-            document.getElementById('c-icon').src = data.channel?.icon || "";
+            document.getElementById('v-title').innerText = detail.title;
+            document.getElementById('v-views').innerText = detail.views;
+            document.getElementById('v-date').innerText = detail.relativeDate;
+            document.getElementById('v-likes').innerText = detail.likes;
+            document.getElementById('c-name').innerText = detail.author.name;
+            document.getElementById('c-subs').innerText = detail.author.subscribers;
+            document.getElementById('c-icon').src = detail.author.thumbnail;
+            document.getElementById('v-desc').innerText = detail.description.text;
 
-            // 2. 画質切り替えと初期再生 (itag 18)
-            if (data.formats) {
-                const qBar = document.getElementById('quality-bar');
-                // 解像度があるもの（動画）だけ抽出
-                const videoFormats = data.formats.filter(f => f.resolution !== "audio only");
+            // 関連動画の描画
+            if (detail["Related-videos"] && detail["Related-videos"].relatedVideos) {
+                const relBox = document.getElementById('related-box');
+                relBox.innerHTML = detail["Related-videos"].relatedVideos.map(rv => `
+                    <a href="/watch?v=${rv.videoId}" class="related-item">
+                        <div class="r-thumb-wrap">
+                            <img src="${rv.thumbnail}" class="r-thumb">
+                            <span class="r-duration">${rv.duration}</span>
+                        </div>
+                        <div class="r-info">
+                            <div class="r-title">${rv.title}</div>
+                            <div class="r-meta">${rv.channelName}</div>
+                            <div class="r-meta">${rv.viewCountText} • ${rv.publishedTimeText}</div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+            // 2. ストリームURLの読み込み (yudlp API)
+            const streamRes = await fetch(`/api/stream/${vId}`);
+            const streamData = await streamRes.json();
+
+            if (streamData.formats) {
+                const qBar = document.getElementById('q-bar');
+                const videoFormats = streamData.formats.filter(f => f.resolution !== "audio only");
                 
                 videoFormats.forEach(f => {
                     const btn = document.createElement('button');
@@ -134,56 +162,27 @@
                     btn.innerText = f.resolution;
                     
                     btn.onclick = () => {
-                        const time = videoEl.currentTime;
-                        const isPaused = videoEl.paused;
+                        const time = video.currentTime;
                         document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
-                        
-                        videoEl.src = f.url;
-                        videoEl.currentTime = time;
-                        if (!isPaused) videoEl.play();
+                        video.src = f.url;
+                        video.currentTime = time;
+                        video.play();
                     };
                     qBar.appendChild(btn);
                 });
 
-                // itag 18 で開始
-                const defaultF = videoFormats.find(f => f.itag === "18") || videoFormats[0];
-                if (defaultF) videoEl.src = defaultF.url;
+                // 初期画質 itag 18 をセット
+                const itag18 = videoFormats.find(f => f.itag === "18") || videoFormats[0];
+                if (itag18) video.src = itag18.url;
             }
 
-            // 3. コメントの流し込み
-            if (data.comments) {
-                document.getElementById('comments-box').innerHTML = data.comments.map(c => `
-                    <div class="comment-item">
-                        <img src="${c.authorIcon}" style="width:36px; height:36px; border-radius:50%;">
-                        <div>
-                            <div style="font-weight:bold; font-size:0.8rem; color:var(--text-sub);">${c.authorName}</div>
-                            <div style="margin-top:4px;">${c.text}</div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            // 4. 関連動画の流し込み
-            if (data.related) {
-                document.getElementById('related-box').innerHTML = data.related.map(r => `
-                    <a href="/watch?v=${r.id}" class="related-item">
-                        <img src="${r.thumbnail}" class="r-thumb">
-                        <div class="r-info">
-                            <div class="r-title">${r.title}</div>
-                            <div style="font-size:0.75rem; color:var(--text-sub); margin-top:4px;">${r.channelName}</div>
-                        </div>
-                    </a>
-                `).join('');
-            }
-
-        } catch (e) {
-            console.error(e);
-            document.getElementById('v-title').innerText = "Failed to load video data.";
+        } catch (err) {
+            console.error(err);
         }
     }
 
-    init();
+    loadPage();
 </script>
 
 </body>
