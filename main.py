@@ -47,15 +47,9 @@ async def view_search(request: Request, q: str = ""):
     require_auth(request)
     if not q:
         return RedirectResponse("/")
-    
     search_provider = Search(q, limit=20)
     results = search_provider.result()
-    
-    return templates.TemplateResponse("search.html", {
-        "request": request,
-        "query": q,
-        "results": results.get('result', [])
-    })
+    return templates.TemplateResponse("search.html", {"request": request, "query": q, "results": results.get('result', [])})
 
 @app.get("/watch", response_class=HTMLResponse)
 async def view_watch(request: Request, v: str = ""):
@@ -88,10 +82,7 @@ async def api_proxy_stream_json(video_id: str):
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            return JSONResponse(
-                status_code=502,
-                content={"error": "Upstream Error", "message": str(e)}
-            )
+            return JSONResponse(status_code=502, content={"error": "Upstream Error", "message": str(e)})
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
