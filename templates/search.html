@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YStube</title>
+    <title>{{ query }} - YStube</title>
     <style>
         :root {
             --accent: #00d4ff;
             --bg: #05070a;
-            --panel: rgba(255, 255, 255, 0.03);
+            --panel: rgba(255, 255, 255, 0.05);
             --border: rgba(255, 255, 255, 0.1);
         }
 
@@ -16,13 +16,13 @@
             margin: 0;
             background-color: var(--bg);
             color: white;
-            font-family: -apple-system, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
         }
 
-        /* ヘッダー */
+        /* Header */
         header {
-            padding: 15px 5%;
+            padding: 12px 5%;
             display: flex;
             align-items: center;
             gap: 20px;
@@ -34,46 +34,44 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .logo-small {
+        .logo-link {
             font-size: 1.2rem;
             font-weight: 200;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             text-decoration: none;
             color: white;
             text-transform: uppercase;
         }
 
-        .search-container-small {
+        .search-wrapper {
             flex: 1;
             max-width: 600px;
             position: relative;
         }
 
-        .search-box-small {
+        .search-input {
             width: 100%;
             background: var(--panel);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 10px 15px;
             color: white;
+            font-size: 1rem;
             outline: none;
             box-sizing: border-box;
         }
 
-        .search-box-small:focus { border-color: var(--accent); }
+        .search-input:focus { border-color: var(--accent); }
 
-        /* サジェストリスト (search.html用) */
+        /* Suggestions */
         #suggestions {
             position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
+            top: 100%; left: 0; right: 0;
             background: #0f1218;
             border: 1px solid var(--border);
             border-radius: 0 0 12px 12px;
             list-style: none;
-            padding: 5px 0;
-            margin: 0;
+            padding: 5px 0; margin: 0;
             display: none;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
@@ -86,135 +84,102 @@
 
         #suggestions li:hover { background: rgba(255,255,255,0.05); color: var(--accent); }
 
-        /* 検索結果エリア */
-        .results-container {
-            max-width: 1000px;
+        /* Results List */
+        .results-list {
+            max-width: 1100px;
             margin: 0 auto;
             padding: 20px 5%;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
         }
 
-        .result-item {
+        .item {
             display: flex;
             gap: 20px;
             text-decoration: none;
             color: inherit;
-            padding: 10px;
+            padding: 8px;
             border-radius: 12px;
             transition: background 0.2s;
         }
 
-        .result-item:hover { background: rgba(255,255,255,0.03); }
+        .item:hover { background: rgba(255,255,255,0.03); }
 
-        /* 画像エリアの共通設定 */
-        .thumbnail-wrapper {
+        .thumb-area {
             position: relative;
             flex-shrink: 0;
             width: 240px;
             aspect-ratio: 16 / 9;
         }
 
-        .thumbnail-img {
-            width: 100%;
-            height: 100%;
+        .thumb-img {
+            width: 100%; height: 100%;
             object-fit: cover;
-            border-radius: 8px;
+            border-radius: 10px;
             background: #111;
         }
 
-        /* チャンネルの場合は画像を丸くする */
-        .type-channel .thumbnail-wrapper {
-            width: 120px;
-            margin: 0 60px; /* 位置調整 */
-        }
-        .type-channel .thumbnail-img {
-            border-radius: 50%;
-            aspect-ratio: 1 / 1;
-        }
+        /* チャンネル用の丸いサムネイル */
+        .type-channel .thumb-area { width: 140px; margin: 0 50px; }
+        .type-channel .thumb-img { border-radius: 50%; aspect-ratio: 1/1; }
 
-        /* プレイリスト用バッジ */
-        .playlist-badge {
+        .badge {
             position: absolute;
-            right: 0; top: 0; bottom: 0;
-            width: 30%;
+            bottom: 8px; right: 8px;
             background: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            border-radius: 0 8px 8px 0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
         }
 
-        /* テキスト情報 */
-        .info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+        .info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .title { font-size: 1.15rem; margin-bottom: 6px; font-weight: 500; }
+        .meta { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
 
-        .title {
-            font-size: 1.1rem;
-            margin-bottom: 5px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .meta {
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.5);
-        }
-
-        @media (max-width: 600px) {
-            .result-item { flex-direction: column; }
-            .thumbnail-wrapper { width: 100%; }
-            .type-channel .thumbnail-wrapper { width: 100px; margin: 0; }
+        @media (max-width: 700px) {
+            .item { flex-direction: column; }
+            .thumb-area { width: 100%; }
+            .type-channel .thumb-area { width: 120px; margin: 0; }
         }
     </style>
 </head>
 <body>
 
 <header>
-    <a href="/" class="logo-small">YS</a>
-    <div class="search-container-small">
+    <a href="/" class="logo-link">YS</a>
+    <div class="search-wrapper">
         <form action="/search" method="GET" id="search-form">
-            <input type="text" name="q" id="search-input" class="search-box-small" placeholder="Search..." value="{{ query }}" autocomplete="off">
+            <input type="text" name="q" id="search-input" class="search-input" value="{{ query }}" autocomplete="off">
         </form>
         <ul id="suggestions"></ul>
     </div>
 </header>
 
-<main class="results-container">
+<main class="results-list">
     {% for item in results %}
-        {# タイプの判定 (video, channel, playlist) #}
-        {% set type = "video" %}
-        {% if item.type == "channel" %}{% set type = "channel" %}{% endif %}
-        {% if item.type == "playlist" %}{% set type = "playlist" %}{% endif %}
-
-        <a href="{{ item.link }}" class="result-item type-{{ type }}" target="_blank">
-            <div class="thumbnail-wrapper">
-                <img src="{{ item.thumbnails[0].url }}" class="thumbnail-img">
-                {% if type == "playlist" %}
-                <div class="playlist-badge">PLAYLIST</div>
+    <a href="{{ item.link }}" class="item type-{{ item.type }}" target="_blank">
+        <div class="thumb-area">
+            <img src="{{ item.thumbnails[0].url if item.thumbnails else '' }}" class="thumb-img">
+            {% if item.type == "playlist" %}
+                <div class="badge">{{ item.videoCount }} VIDEOS</div>
+            {% elif item.type == "video" and item.duration %}
+                <div class="badge">{{ item.duration }}</div>
+            {% endif %}
+        </div>
+        <div class="info">
+            <div class="title">{{ item.title }}</div>
+            <div class="meta">
+                {% if item.type == "channel" %}
+                    {{ item.subscribers or "登録者数非公開" }} • チャンネル
+                {% elif item.type == "playlist" %}
+                    {{ item.channel.name }} • プレイリスト
+                {% else %}
+                    {{ item.channel.name }} • {{ item.viewCount.short if item.viewCount else "再生数不明" }} • {{ item.publishedTime }}
                 {% endif %}
             </div>
-            <div class="info">
-                <div class="title">{{ item.title }}</div>
-                <div class="meta">
-                    {% if type == "channel" %}
-                        {{ item.subscribers }} • チャンネル
-                    {% elif type == "playlist" %}
-                        {{ item.channel.name }} • {{ item.videoCount }}本の動画
-                    {% else %}
-                        {{ item.channel.name }} • {{ item.viewCount.short or "再生回数不明" }}
-                    {% endif %}
-                </div>
-            </div>
-        </a>
+        </div>
+    </a>
     {% endfor %}
 </main>
 
@@ -224,9 +189,9 @@
 
     window.callback = (data) => {
         const results = data[1] || [];
-        const cleanList = results.map(item => Array.isArray(item) ? item[0] : item).filter(i => typeof i === 'string');
+        const cleanList = results.map(i => Array.isArray(i) ? i[0] : i).filter(s => typeof s === 'string');
         if (cleanList.length > 0) {
-            list.innerHTML = cleanList.map(text => `<li>${text}</li>`).join('');
+            list.innerHTML = cleanList.map(t => `<li>${t}</li>`).join('');
             list.style.display = 'block';
         } else {
             list.style.display = 'none';
@@ -234,13 +199,13 @@
     };
 
     input.addEventListener('input', () => {
-        const query = input.value.trim();
-        if (!query) { list.style.display = 'none'; return; }
+        const q = input.value.trim();
+        if (!q) { list.style.display = 'none'; return; }
         const old = document.getElementById('jsonp');
         if (old) old.remove();
         const s = document.createElement('script');
         s.id = 'jsonp';
-        s.src = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(query)}&callback=callback`;
+        s.src = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}&callback=callback`;
         document.body.appendChild(s);
     });
 
@@ -252,7 +217,7 @@
     });
 
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search-container-small')) list.style.display = 'none';
+        if (!e.target.closest('.search-wrapper')) list.style.display = 'none';
     });
 </script>
 
