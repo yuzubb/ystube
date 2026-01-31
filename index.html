@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YStube</title>
+    <style>
+        :root {
+            --primary-glow: #00f2fe;
+            --secondary-glow: #4facfe;
+            --bg-dark: #05070a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: var(--bg-dark);
+            font-family: 'Avenir', 'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+            overflow: hidden;
+            color: #e2e8f0;
+        }
+
+        /* 背景の有機的な光 */
+        .orb {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.2;
+        }
+        .orb-1 {
+            background: var(--primary-glow);
+            top: -10%;
+            left: -10%;
+            animation: move 20s infinite alternate;
+        }
+        .orb-2 {
+            background: #7000ff;
+            bottom: -10%;
+            right: -10%;
+            animation: move 25s infinite alternate-reverse;
+        }
+
+        @keyframes move {
+            from { transform: translate(0, 0); }
+            to { transform: translate(100px, 100px); }
+        }
+
+        .search-container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        /* ロゴ：細身で光るデザイン */
+        .brand-logo {
+            font-size: 5rem;
+            font-weight: 200;
+            margin-bottom: 3rem;
+            letter-spacing: 15px;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #fff 30%, rgba(255,255,255,0.2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
+        }
+
+        .search-box {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 8px;
+            display: flex;
+            backdrop-filter: blur(20px);
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .search-box:focus-within {
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.15);
+            transform: scale(1.02);
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 1.2rem;
+            padding: 15px 25px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .search-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 0 35px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+
+        .search-button:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        /* 下の装飾テキスト */
+        .sub-text {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="search-container">
+        <div class="brand-logo">YSTUBE</div>
+
+        <form class="search-box" action="/search" method="GET">
+            <input type="text" name="q" class="search-input" placeholder="Discovery starts here..." autofocus autocomplete="off">
+            <button type="submit" class="search-button">Search</button>
+        </form>
+
+        <div class="sub-text">Next Generation Interface</div>
+    </div>
+
+</body>
+</html>
