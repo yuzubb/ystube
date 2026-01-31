@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YStube</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Watch - YStube</title>
     <style>
         :root {
             --accent: #00d4ff;
@@ -14,78 +14,125 @@
             --text-sub: #aaaaaa;
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
             margin: 0; background: var(--bg); color: var(--text-main);
-            font-family: "YouTube Sans", "Roboto", sans-serif;
+            font-family: "YouTube Sans", "Roboto", -apple-system, sans-serif;
+            overflow-x: hidden;
         }
 
+        /* Responsive Layout Overhaul */
         .container {
-            max-width: 1280px; margin: 0 auto; padding: 20px;
-            display: grid; grid-template-columns: 1fr 380px; gap: 24px;
+            max-width: 1400px; margin: 0 auto;
+            display: flex; flex-direction: column; gap: 0;
         }
 
-        /* Player Section */
+        @media (min-width: 1001px) {
+            .container {
+                display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 20px;
+            }
+        }
+
+        /* Player - Mobile First */
+        .player-wrapper {
+            position: sticky; top: 0; z-index: 100; background: var(--bg); width: 100%;
+        }
+
+        @media (min-width: 1001px) {
+            .player-wrapper { position: static; }
+        }
+
         #video-viewport {
             width: 100%; aspect-ratio: 16/9; background: #000;
-            border-radius: 12px; overflow: hidden; margin-bottom: 12px;
+            overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        video { width: 100%; height: 100%; }
 
-        .v-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; line-height: 1.4; }
+        @media (min-width: 1001px) {
+            #video-viewport { border-radius: 12px; margin-bottom: 12px; }
+        }
 
-        /* Quality Select */
-        .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        video { width: 100%; height: 100%; display: block; }
+
+        /* Content Padding for Mobile */
+        .main-info, aside { padding: 12px; }
+        @media (min-width: 1001px) {
+            .main-info, aside { padding: 0; }
+        }
+
+        .v-title { 
+            font-size: clamp(1.1rem, 4vw, 1.3rem); 
+            font-weight: bold; margin: 10px 0; line-height: 1.4; 
+        }
+
+        /* Scrollable Quality Bar */
+        .q-bar { 
+            display: flex; gap: 8px; margin-bottom: 15px; 
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px; scrollbar-width: none; 
+        }
+        .q-bar::-webkit-scrollbar { display: none; }
+        
         .q-btn {
             background: var(--panel); border: 1px solid var(--border); color: white;
-            padding: 6px 14px; border-radius: 18px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; 
+            white-space: nowrap; transition: 0.2s;
         }
-        .q-btn.active { background: white; color: black; font-weight: bold; }
+        .q-btn.active { background: white; color: black; font-weight: bold; border-color: white; }
 
-        /* Author & Stats */
-        .meta-container { background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-        .author-row { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
-        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .c-info { flex: 1; }
-        .c-name { font-weight: bold; font-size: 1rem; display: block; }
+        /* Meta Info Section */
+        .author-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #222; }
+        .c-info { flex: 1; min-width: 0; }
+        .c-name { font-weight: bold; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
         .c-subs { font-size: 0.8rem; color: var(--text-sub); }
 
-        .stats-row { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: var(--text-main); }
+        .sub-btn {
+            background: white; color: black; border: none; 
+            padding: 8px 16px; border-radius: 20px; font-weight: bold; 
+            cursor: pointer; font-size: 0.85rem;
+        }
+
+        .meta-container { background: var(--panel); border-radius: 12px; padding: 12px; margin-bottom: 20px; }
+        .stats-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; color: var(--text-main); }
         .description { 
-            font-size: 0.9rem; line-height: 1.5; color: var(--text-main); 
+            font-size: 0.85rem; line-height: 1.5; color: #f1f1f1; 
             white-space: pre-wrap; word-break: break-all;
         }
 
-        /* Related Videos */
+        /* Related Videos - Modern List */
         .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; }
         .related-item {
             display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 12px;
+            transition: opacity 0.2s;
         }
-        .r-thumb-wrap { position: relative; width: 160px; flex-shrink: 0; }
-        .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; }
+        .related-item:active { opacity: 0.6; }
+
+        .r-thumb-wrap { position: relative; width: 40%; max-width: 160px; flex-shrink: 0; }
+        .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: #222; }
         .r-duration {
             position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
-            padding: 2px 4px; border-radius: 4px; font-size: 0.7rem;
+            padding: 2px 4px; border-radius: 4px; font-size: 0.65rem; color: white;
         }
-        .r-title { font-size: 0.9rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; }
-        .r-meta { font-size: 0.75rem; color: var(--text-sub); }
+        .r-info { flex: 1; min-width: 0; }
+        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; line-height: 1.2; }
+        .r-meta { font-size: 0.75rem; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        @media (max-width: 1000px) {
-            .container { grid-template-columns: 1fr; }
-            .r-thumb-wrap { width: 120px; }
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <main>
+    <div class="player-wrapper">
         <div id="video-viewport">
             <video id="main-video" controls autoplay playsinline></video>
         </div>
+    </div>
 
-        <div class="q-bar" id="q-bar"></div>
-
+    <main class="main-info">
         <h1 class="v-title" id="v-title">Loading...</h1>
+        
+        <div class="q-bar" id="q-bar"></div>
 
         <div class="author-row">
             <img id="c-icon" src="" class="c-icon">
@@ -93,7 +140,7 @@
                 <span id="c-name" class="c-name">---</span>
                 <span id="c-subs" class="c-subs">--- subscribers</span>
             </div>
-            <button style="background:white; color:black; border:none; padding:8px 16px; border-radius:20px; font-weight:bold; cursor:pointer;">Subscribe</button>
+            <button class="sub-btn">Subscribe</button>
         </div>
 
         <div class="meta-container">
@@ -116,7 +163,7 @@
 
     async function loadPage() {
         try {
-            // 1. メタデータの読み込み (duckdns API)
+            // Meta Fetch
             const detailRes = await fetch(`/api/details/${vId}`);
             const detail = await detailRes.json();
 
@@ -129,25 +176,23 @@
             document.getElementById('c-icon').src = detail.author.thumbnail;
             document.getElementById('v-desc').innerText = detail.description.text;
 
-            // 関連動画の描画
             if (detail["Related-videos"] && detail["Related-videos"].relatedVideos) {
-                const relBox = document.getElementById('related-box');
-                relBox.innerHTML = detail["Related-videos"].relatedVideos.map(rv => `
+                document.getElementById('related-box').innerHTML = detail["Related-videos"].relatedVideos.map(rv => `
                     <a href="/watch?v=${rv.videoId}" class="related-item">
                         <div class="r-thumb-wrap">
-                            <img src="${rv.thumbnail}" class="r-thumb">
+                            <img src="${rv.thumbnail}" class="r-thumb" loading="lazy">
                             <span class="r-duration">${rv.duration}</span>
                         </div>
                         <div class="r-info">
                             <div class="r-title">${rv.title}</div>
                             <div class="r-meta">${rv.channelName}</div>
-                            <div class="r-meta">${rv.viewCountText} • ${rv.publishedTimeText}</div>
+                            <div class="r-meta">${rv.viewCountText}</div>
                         </div>
                     </a>
                 `).join('');
             }
 
-            // 2. ストリームURLの読み込み (yudlp API)
+            // Stream Fetch
             const streamRes = await fetch(`/api/stream/${vId}`);
             const streamData = await streamRes.json();
 
@@ -172,13 +217,12 @@
                     qBar.appendChild(btn);
                 });
 
-                // 初期画質 itag 18 をセット
                 const itag18 = videoFormats.find(f => f.itag === "18") || videoFormats[0];
                 if (itag18) video.src = itag18.url;
             }
 
         } catch (err) {
-            console.error(err);
+            console.error("Load failed:", err);
         }
     }
 
