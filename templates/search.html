@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YStube</title>
+    <style>
+        :root {
+            --accent: #00d4ff;
+            --bg: #05070a;
+            --panel: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: white;
+            font-family: -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ヘッダー */
+        header {
+            padding: 15px 5%;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(5, 7, 10, 0.9);
+            backdrop-filter: blur(15px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-small {
+            font-size: 1.2rem;
+            font-weight: 200;
+            letter-spacing: 3px;
+            text-decoration: none;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .search-container-small {
+            flex: 1;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .search-box-small {
+            width: 100%;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .search-box-small:focus { border-color: var(--accent); }
+
+        /* サジェストリスト (search.html用) */
+        #suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #0f1218;
+            border: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            list-style: none;
+            padding: 5px 0;
+            margin: 0;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #suggestions li {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        #suggestions li:hover { background: rgba(255,255,255,0.05); color: var(--accent); }
+
+        /* 検索結果エリア */
+        .results-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px 5%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .result-item {
+            display: flex;
+            gap: 20px;
+            text-decoration: none;
+            color: inherit;
+            padding: 10px;
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+
+        .result-item:hover { background: rgba(255,255,255,0.03); }
+
+        /* 画像エリアの共通設定 */
+        .thumbnail-wrapper {
+            position: relative;
+            flex-shrink: 0;
+            width: 240px;
+            aspect-ratio: 16 / 9;
+        }
+
+        .thumbnail-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #111;
+        }
+
+        /* チャンネルの場合は画像を丸くする */
+        .type-channel .thumbnail-wrapper {
+            width: 120px;
+            margin: 0 60px; /* 位置調整 */
+        }
+        .type-channel .thumbnail-img {
+            border-radius: 50%;
+            aspect-ratio: 1 / 1;
+        }
+
+        /* プレイリスト用バッジ */
+        .playlist-badge {
+            position: absolute;
+            right: 0; top: 0; bottom: 0;
+            width: 30%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* テキスト情報 */
+        .info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .meta {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        @media (max-width: 600px) {
+            .result-item { flex-direction: column; }
+            .thumbnail-wrapper { width: 100%; }
+            .type-channel .thumbnail-wrapper { width: 100px; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/" class="logo-small">YS</a>
+    <div class="search-container-small">
+        <form action="/search" method="GET" id="search-form">
+            <input type="text" name="q" id="search-input" class="search-box-small" placeholder="Search..." value="{{ query }}" autocomplete="off">
+        </form>
+        <ul id="suggestions"></ul>
+    </div>
+</header>
+
+<main class="results-container">
+    {% for item in results %}
+        {# タイプの判定 (video, channel, playlist) #}
+        {% set type = "video" %}
+        {% if item.type == "channel" %}{% set type = "channel" %}{% endif %}
+        {% if item.type == "playlist" %}{% set type = "playlist" %}{% endif %}
+
+        <a href="{{ item.link }}" class="result-item type-{{ type }}" target="_blank">
+            <div class="thumbnail-wrapper">
+                <img src="{{ item.thumbnails[0].url }}" class="thumbnail-img">
+                {% if type == "playlist" %}
+                <div class="playlist-badge">PLAYLIST</div>
+                {% endif %}
+            </div>
+            <div class="info">
+                <div class="title">{{ item.title }}</div>
+                <div class="meta">
+                    {% if type == "channel" %}
+                        {{ item.subscribers }} • チャンネル
+                    {% elif type == "playlist" %}
+                        {{ item.channel.name }} • {{ item.videoCount }}本の動画
+                    {% else %}
+                        {{ item.channel.name }} • {{ item.viewCount.short or "再生回数不明" }}
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    {% endfor %}
+</main>
+
+<script>
+    const input = document.getElementById('search-input');
+    const list = document.getElementById('suggestions');
+
+    window.callback = (data) => {
+        const results = data[1] || [];
+        const cleanList = results.map(item => Array.isArray(item) ? item[0] : item).filter(i => typeof i === 'string');
+        if (cleanList.length > 0) {
+            list.innerHTML = cleanList.map(text => `<li>${text}</li>`).join('');
+            list.style.display = 'block';
+        } else {
+            list.style.display = 'none';
+        }
+    };
+
+    input.addEventListener('input', () => {
+        const query = input.value.trim();
+        if (!query) { list.style.display = 'none'; return; }
+        const old = document.getElementById('jsonp');
+        if (old) old.remove();
+        const s = document.createElement('script');
+        s.id = 'jsonp';
+        s.src = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(query)}&callback=callback`;
+        document.body.appendChild(s);
+    });
+
+    list.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LI') {
+            input.value = e.target.innerText;
+            document.getElementById('search-form').submit();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container-small')) list.style.display = 'none';
+    });
+</script>
+
+</body>
+</html>
