@@ -4,4 +4,4 @@ jinja2
 python-multipart
 youtube-search-python
 httpx==0.24.1
-pytube
+pytchat
