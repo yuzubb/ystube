@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.status import HTTP_303_SEE_OTHER
-from pytube import YouTube
+import pytchat
 
 try:
     from youtubesearchpython import Search
@@ -67,20 +67,20 @@ async def api_video_details(video_id: str):
         try:
             res = await client.get(f"{DETAILS_API_BASE}/{video_id}?depth=1")
             data = res.json()
-            
             try:
-                yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-                data['comments'] = [
-                    {
-                        "authorName": str(c.author),
-                        "authorThumbnail": "",
-                        "text": str(c.text),
-                        "publishedTime": ""
-                    } for c in yt.initial_data.get('contents', {}).get('twoColumnWatchNextResults', {}).get('results', {}).get('results', {}).get('contents', []) if 'commentThreadRenderer' in c
-                ][:20]
+                chat = pytchat.create(video_id=video_id)
+                comments_list = []
+                if chat.is_alive():
+                    for c in chat.get().sync_items():
+                        comments_list.append({
+                            "authorName": c.author.name,
+                            "authorThumbnail": c.author.imageUrl,
+                            "text": c.message,
+                            "publishedTime": c.datetime
+                        })
+                data['comments'] = comments_list
             except:
                 data['comments'] = []
-
             return data
         except Exception as e:
             return JSONResponse(status_code=502, content={"error": str(e)})
