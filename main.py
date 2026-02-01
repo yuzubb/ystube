@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.status import HTTP_303_SEE_OTHER
+from pytube import YouTube
 
 try:
     from youtubesearchpython import Search
@@ -60,22 +61,29 @@ async def view_watch(request: Request, v: str = ""):
         return RedirectResponse("/")
     return templates.TemplateResponse("watch.html", {"request": request, "video_id": v})
 
-@app.get("/api/search/more")
-async def api_get_more_results(q: str, offset: int = 1):
-    search_provider = Search(q, limit=20)
-    for _ in range(offset):
-        search_provider.next()
-    return search_provider.result()
-
 @app.get("/api/details/{video_id}")
 async def api_video_details(video_id: str):
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            target_url = f"{DETAILS_API_BASE}/{video_id}?depth=1"
-            response = await client.get(target_url)
-            return response.json()
+            res = await client.get(f"{DETAILS_API_BASE}/{video_id}?depth=1")
+            data = res.json()
+            
+            try:
+                yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
+                data['comments'] = [
+                    {
+                        "authorName": str(c.author),
+                        "authorThumbnail": "",
+                        "text": str(c.text),
+                        "publishedTime": ""
+                    } for c in yt.initial_data.get('contents', {}).get('twoColumnWatchNextResults', {}).get('results', {}).get('results', {}).get('contents', []) if 'commentThreadRenderer' in c
+                ][:20]
+            except:
+                data['comments'] = []
+
+            return data
         except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "Details API Error", "msg": str(e)})
+            return JSONResponse(status_code=502, content={"error": str(e)})
 
 @app.get("/api/stream/{video_id}")
 async def api_proxy_stream_json(video_id: str):
@@ -85,7 +93,7 @@ async def api_proxy_stream_json(video_id: str):
             response = await client.get(target_url)
             return response.json()
         except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "Stream API Error"})
+            return JSONResponse(status_code=502, content={"error": str(e)})
 
 @app.exception_handler(404)
 async def error_404(request: Request, _):
