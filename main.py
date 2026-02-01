@@ -16,10 +16,10 @@ AUTH_COOKIE = "ys_auth"
 AUTH_VALUE = "authenticated_user"
 DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
-# Invidiousインスタンス（負荷状況により適宜変更してください）
+# 指定されたInvidiousインスタンス
 INVIDIOUS_API_BASE = "https://invidious.nerdvpn.de/api/v1"
 
-# --- Helpers & Auth ---
+# --- Auth Helpers ---
 
 def is_auth(request: Request) -> bool:
     return request.cookies.get(AUTH_COOKIE) == AUTH_VALUE
@@ -68,43 +68,23 @@ async def view_watch(request: Request, v: str = "", _=Depends(verify_auth)):
 
 @app.get("/api/details/{video_id}")
 async def api_video_details(video_id: str):
-    """動画の基本メタデータを取得"""
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             res = await client.get(f"{DETAILS_API_BASE}/{video_id}?depth=1")
-            res.raise_for_status()
             return res.json()
         except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "Failed to fetch video details"})
+            return JSONResponse(status_code=502, content={"error": str(e)})
 
 @app.get("/api/comments/{video_id}")
 async def api_get_comments(video_id: str):
-    """Invidious APIからコメントのみを個別に取得"""
+    """指定されたInvidiousインスタンスからコメントを取得してそのまま返す"""
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
+            # 外部APIへのリクエスト
             comment_res = await client.get(f"{INVIDIOUS_API_BASE}/comments/{video_id}")
-            comment_res.raise_for_status()
-            comment_data = comment_res.json()
-            
-            # フロントエンドで扱いやすい形に整形
-            parsed_comments = []
-            for c in comment_data.get("comments", []):
-                parsed_comments.append({
-                    "author": c.get("author"),
-                    "authorThumbnail": c.get("authorThumbnails", [{}])[0].get("url", ""),
-                    "content": c.get("content"),
-                    "publishedText": c.get("publishedText"),
-                    "likeCount": c.get("likeCount", 0),
-                    "authorIsChannelOwner": c.get("authorIsChannelOwner", False)
-                })
-            
-            return {
-                "videoId": video_id,
-                "commentCount": comment_data.get("commentCount"),
-                "comments": parsed_comments
-            }
+            return comment_res.json()
         except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "Failed to fetch comments"})
+            return JSONResponse(status_code=502, content={"error": str(e)})
 
 @app.get("/api/stream/{video_id}")
 async def api_proxy_stream_json(video_id: str):
@@ -114,7 +94,7 @@ async def api_proxy_stream_json(video_id: str):
             response = await client.get(target_url)
             return response.json()
         except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "Failed to fetch stream data"})
+            return JSONResponse(status_code=502, content={"error": str(e)})
 
 # --- Error Handlers ---
 
