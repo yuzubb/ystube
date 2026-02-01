@@ -1,4 +1,5 @@
 import httpx
+import urllib.parse
 from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -16,7 +17,6 @@ AUTH_COOKIE = "ys_auth"
 AUTH_VALUE = "authenticated_user"
 DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
-# 指定されたInvidiousインスタンス
 INVIDIOUS_API_BASE = "https://invidious.nerdvpn.de/api/v1"
 
 # --- Auth Helpers ---
@@ -77,13 +77,39 @@ async def api_video_details(video_id: str):
 
 @app.get("/api/comments/{video_id}")
 async def api_get_comments(video_id: str):
-    """指定されたInvidiousインスタンスからコメントを取得してそのまま返す"""
+    """
+    Invidious APIから取得し、指定された形式に整形して返す
+    """
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            # 外部APIへのリクエスト
-            comment_res = await client.get(f"{INVIDIOUS_API_BASE}/comments/{video_id}")
-            return comment_res.json()
+            # 安全にエンコード
+            quoted_id = urllib.parse.quote(video_id)
+            target_url = f"{INVIDIOUS_API_BASE}/comments/{quoted_id}"
+            
+            response = await client.get(target_url)
+            
+            # 200 OKでない場合はエラーを返す
+            if response.status_code != 200:
+                return JSONResponse(status_code=response.status_code, content={"error": "Invidious API Error"})
+
+            data = response.json()
+            t = data.get("comments", [])
+
+            # 指定のロジックでリストを作成
+            # - authoricon: 最後のサムネイル画像を使用
+            # - body: contentHtml内の改行を <br> に変換
+            return [
+                {
+                    "author": i["author"],
+                    "authoricon": i["authorThumbnails"][-1]["url"] if i.get("authorThumbnails") else "",
+                    "authorid": i["authorId"],
+                    "body": i["contentHtml"].replace("\n", "<br>")
+                } 
+                for i in t
+            ]
+
         except Exception as e:
+            # 解析失敗やタイムアウト時は502エラーを返却
             return JSONResponse(status_code=502, content={"error": str(e)})
 
 @app.get("/api/stream/{video_id}")
