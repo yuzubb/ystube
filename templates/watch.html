@@ -74,12 +74,19 @@
         .stats-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; }
         .description { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
 
+        /* --- Comments Section --- */
+        .comments-section { margin-top: 20px; }
+        .comment-item { display: flex; gap: 12px; margin-bottom: 16px; }
+        .comment-icon { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
+        .comment-content { flex: 1; font-size: 0.9rem; }
+        .comment-author { font-weight: bold; font-size: 0.8rem; margin-bottom: 4px; display: block; }
+        .comment-body { line-height: 1.4; color: #f1f1f1; }
+
         /* Related List */
         .related-item { display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 12px; }
         .r-thumb-wrap { position: relative; width: 40%; max-width: 160px; flex-shrink: 0; }
         .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: #222; }
         
-        /* Badges */
         .badge {
             position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
             padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
@@ -123,10 +130,16 @@
             </div>
             <div id="v-desc" class="description"></div>
         </div>
+
+        <div class="comments-section">
+            <h3 id="comment-count" style="font-size: 1.1rem; margin-bottom: 15px;">Comments</h3>
+            <div id="comments-list">
+                <p style="color:var(--text-sub); font-size:0.9rem;">Loading comments...</p>
+            </div>
+        </div>
     </main>
 
-    <aside id="related-box">
-        </aside>
+    <aside id="related-box"></aside>
 </div>
 
 <script>
@@ -148,7 +161,7 @@
             document.getElementById('c-icon').src = data.author.thumbnail;
             document.getElementById('v-desc').innerText = data.description.text;
 
-            // Related Videos Logic (Conditional Rendering)
+            // Related Videos
             if (data["Related-videos"]) {
                 const box = document.getElementById('related-box');
                 box.innerHTML = `<div class="section-title" style="font-weight:bold; margin-bottom:15px;">Related</div>` + 
@@ -158,22 +171,11 @@
                         <a href="/watch?v=${rv.videoId}${isPL ? '&list='+rv.playlistId : ''}" class="related-item">
                             <div class="r-thumb-wrap">
                                 <img src="${rv.thumbnail}" class="r-thumb">
-                                ${isPL ? `
-                                    <div class="playlist-overlay">
-                                        <span style="font-size:12px;">☰</span>
-                                    </div>
-                                ` : `
-                                    <span class="badge">${rv.duration}</span>
-                                `}
+                                ${isPL ? `<div class="playlist-overlay"><span style="font-size:12px;">☰</span></div>` : `<span class="badge">${rv.duration}</span>`}
                             </div>
                             <div class="r-info">
                                 <div class="r-title">${rv.title}</div>
-                                ${!isPL ? `
-                                    <div class="r-meta">${rv.channelName}</div>
-                                    <div class="r-meta">${rv.viewCountText}</div>
-                                ` : `
-                                    <div class="r-meta" style="color:var(--accent);">PLAYLIST</div>
-                                `}
+                                ${!isPL ? `<div class="r-meta">${rv.channelName}</div><div class="r-meta">${rv.viewCountText}</div>` : `<div class="r-meta" style="color:var(--accent);">PLAYLIST</div>`}
                             </div>
                         </a>
                     `;
@@ -201,8 +203,40 @@
                 const def = vFmts.find(f => f.itag === "18") || vFmts[0];
                 if (def) video.src = def.url;
             }
+
+            // 3. Comments Fetch (独立して取得)
+            fetchComments();
+
         } catch (e) { console.error(e); }
     }
+
+    async function fetchComments() {
+        try {
+            const cRes = await fetch(`/api/comments/${vId}`);
+            const comments = await cRes.json();
+            const listEl = document.getElementById('comments-list');
+
+            if (!comments || comments.length === 0 || comments.error) {
+                listEl.innerHTML = `<p style="color:var(--text-sub); font-size:0.9rem;">No comments available.</p>`;
+                return;
+            }
+
+            listEl.innerHTML = comments.map(c => `
+                <div class="comment-item">
+                    <img src="${c.authoricon}" class="comment-icon" onerror="this.src='https://www.youtube.com/img/desktop/ftbc/default_avatar.png'">
+                    <div class="comment-content">
+                        <span class="comment-author">${c.author}</span>
+                        <div class="comment-body">${c.body}</div>
+                    </div>
+                </div>
+            `).join('');
+
+        } catch (e) {
+            console.error("Comment error:", e);
+            document.getElementById('comments-list').innerHTML = `<p style="color:var(--text-sub); font-size:0.9rem;">Failed to load comments.</p>`;
+        }
+    }
+
     init();
 </script>
 </body>
