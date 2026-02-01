@@ -16,7 +16,7 @@ AUTH_COOKIE = "ys_auth"
 AUTH_VALUE = "authenticated_user"
 DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
-# Invidiousのパブリックインスタンス（必要に応じて変更してください）
+# Invidiousインスタンス（負荷状況により適宜変更してください）
 INVIDIOUS_API_BASE = "https://invidious.nerdvpn.de/api/v1"
 
 # --- Helpers & Auth ---
@@ -46,7 +46,6 @@ async def view_login(request: Request):
 async def action_login(passcode: str = Form(...)):
     if passcode == "yes":
         response = RedirectResponse("/", status_code=HTTP_303_SEE_OTHER)
-        # 本番環境では secure=True を推奨
         response.set_cookie(key=AUTH_COOKIE, value=AUTH_VALUE, httponly=True, samesite="lax")
         return response
     return RedirectResponse("/ys", status_code=HTTP_303_SEE_OTHER)
@@ -69,37 +68,43 @@ async def view_watch(request: Request, v: str = "", _=Depends(verify_auth)):
 
 @app.get("/api/details/{video_id}")
 async def api_video_details(video_id: str):
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    """動画の基本メタデータを取得"""
+    async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            # 1. ビデオ詳細の取得
             res = await client.get(f"{DETAILS_API_BASE}/{video_id}?depth=1")
             res.raise_for_status()
-            data = res.json()
-
-            # 2. Invidious APIによるコメント取得
-            try:
-                comment_res = await client.get(f"{INVIDIOUS_API_BASE}/comments/{video_id}")
-                comment_data = comment_res.json()
-                
-                comments_list = []
-                for c in comment_data.get("comments", []):
-                    # 元のフロントエンドの構造にマッピング
-                    comments_list.append({
-                        "authorName": c.get("author"),
-                        "authorThumbnail": c.get("authorThumbnails", [{}])[0].get("url", ""),
-                        "text": c.get("content"),
-                        "publishedTime": c.get("publishedText"),
-                        "likeCount": c.get("likeCount", 0),
-                        "authorIsChannelOwner": c.get("authorIsChannelOwner", False)
-                    })
-                data['comments'] = comments_list
-            except Exception:
-                # コメント取得失敗時は空配列を返して詳細表示を優先する
-                data['comments'] = []
-
-            return data
+            return res.json()
         except Exception as e:
             return JSONResponse(status_code=502, content={"error": "Failed to fetch video details"})
+
+@app.get("/api/comments/{video_id}")
+async def api_get_comments(video_id: str):
+    """Invidious APIからコメントのみを個別に取得"""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            comment_res = await client.get(f"{INVIDIOUS_API_BASE}/comments/{video_id}")
+            comment_res.raise_for_status()
+            comment_data = comment_res.json()
+            
+            # フロントエンドで扱いやすい形に整形
+            parsed_comments = []
+            for c in comment_data.get("comments", []):
+                parsed_comments.append({
+                    "author": c.get("author"),
+                    "authorThumbnail": c.get("authorThumbnails", [{}])[0].get("url", ""),
+                    "content": c.get("content"),
+                    "publishedText": c.get("publishedText"),
+                    "likeCount": c.get("likeCount", 0),
+                    "authorIsChannelOwner": c.get("authorIsChannelOwner", False)
+                })
+            
+            return {
+                "videoId": video_id,
+                "commentCount": comment_data.get("commentCount"),
+                "comments": parsed_comments
+            }
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "Failed to fetch comments"})
 
 @app.get("/api/stream/{video_id}")
 async def api_proxy_stream_json(video_id: str):
