@@ -2,24 +2,25 @@ import json
 import httpx
 import urllib.parse
 import datetime
-import concurrent.futures
+import asyncio
 from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.status import HTTP_303_SEE_OTHER
 
-# --- Configuration & Constants ---
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+# --- Constants ---
 AUTH_COOKIE = "ys_auth"
 AUTH_VALUE = "authenticated_user"
-
-# API Base URLs
 DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
 
-# 参考コードに基づいたコメント用インスタンスリスト
+# 提供されたファイルに基づいたインスタンスリスト
+SEARCH_API_INSTANCES = [
+    'https://api-five-zeta-55.vercel.app/',
+]
 COMMENT_API_INSTANCES = [
     'https://invidious.lunivers.trade/',
     'https://invidious.ducks.party/',
@@ -39,34 +40,41 @@ async def verify_auth(request: Request):
     if not is_auth(request):
         raise HTTPException(status_code=303, headers={"Location": "/ys"})
 
-async def fetch_json(url: str, timeout: float = 10.0):
-    """共通のGETリクエスト用ヘルパー"""
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'}
-            response = await client.get(url, headers=headers)
-            if response.status_code == 200:
-                return response.json()
-        except Exception:
-            pass
-    return None
-
 async def request_invidious_parallel(path: str, instances: list):
-    """複数インスタンスに並列リクエストを送り、最初に成功したものを返す"""
+    """並列でリクエストを送り、最初に成功したJSONを返す"""
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'}
-    
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        # すべてのインスタンスに対してタスクを作成
+    async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
         tasks = [client.get(f"{api}api/v1{path}", headers=headers) for api in instances]
-        
-        # 最初に完了した成功レスポンスを待つ
         for future in asyncio.as_completed(tasks):
             try:
                 response = await future
                 if response.status_code == 200:
                     return response.json()
-            except Exception:
+            except:
                 continue
+    return None
+
+def format_search_item(i):
+    """提供されたコードの formatSearchData ロジックを適用"""
+    t = i.get("type")
+    if t == "video":
+        return {
+            "type": "video",
+            "title": i.get("title"),
+            "id": i.get("videoId"),
+            "author": i.get("author"),
+            "published": i.get("publishedText"),
+            "length": str(datetime.timedelta(seconds=i.get("lengthSeconds", 0))),
+            "view_count_text": i.get("viewCountText")
+        }
+    elif t == "playlist":
+        return {
+            "type": "playlist",
+            "title": i.get("title"),
+            "id": i.get("playlistId"),
+            "thumbnail": i.get("playlistThumbnail"),
+            "count": i.get("videoCount")
+        }
     return None
 
 # --- Routes ---
@@ -83,11 +91,28 @@ async def view_login(request: Request):
 
 @app.post("/ys")
 async def action_login(passcode: str = Form(...)):
-    if passcode == "yuzu": # 参考コードのコード「yuzu」に合わせました
+    if passcode == "yuzu":
         response = RedirectResponse("/", status_code=HTTP_303_SEE_OTHER)
         response.set_cookie(key=AUTH_COOKIE, value=AUTH_VALUE, httponly=True)
         return response
     return RedirectResponse("/ys", status_code=HTTP_303_SEE_OTHER)
+
+@app.get("/search", response_class=HTMLResponse)
+async def view_search(request: Request, q: str, page: int = 1, _=Depends(verify_auth)):
+    """youtubesearchpython の代わりに Invidious API を使用"""
+    path = f"/search?q={urllib.parse.quote(q)}&page={page}&hl=jp"
+    data = await request_invidious_parallel(path, SEARCH_API_INSTANCES + COMMENT_API_INSTANCES)
+    
+    results = []
+    if data:
+        results = [format_search_item(i) for i in data if format_search_item(i)]
+
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "results": results,
+        "word": q,
+        "next": f"/search?q={q}&page={page + 1}"
+    })
 
 @app.get("/watch", response_class=HTMLResponse)
 async def view_watch(request: Request, v: str, _=Depends(verify_auth)):
@@ -97,41 +122,33 @@ async def view_watch(request: Request, v: str, _=Depends(verify_auth)):
 
 @app.get("/api/details/{video_id}")
 async def api_video_details(video_id: str):
-    data = await fetch_json(f"{DETAILS_API_BASE}/{video_id}?depth=1")
-    return data if data else JSONResponse(status_code=502, content={"error": "Failed to fetch details"})
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.get(f"{DETAILS_API_BASE}/{video_id}?depth=1")
+            return res.json()
+        except:
+            return JSONResponse(status_code=502, content={"error": "details failed"})
 
 @app.get("/api/comments/{video_id}")
 async def api_get_comments(video_id: str):
-    """
-    参考コードのロジックを非同期並列リクエストで再現
-    """
     path = f"/comments/{urllib.parse.quote(video_id)}"
     data = await request_invidious_parallel(path, COMMENT_API_INSTANCES)
+    if not data: return JSONResponse(status_code=502, content={"error": "comments failed"})
     
-    if not data or "comments" not in data:
-        return JSONResponse(status_code=502, content={"error": "All Invidious instances failed"})
-
-    # 参考コードの整形ロジックをそのまま適用
-    try:
-        return [
-            {
-                "author": i["author"],
-                "authoricon": i["authorThumbnails"][-1]["url"] if i.get("authorThumbnails") else "",
-                "authorid": i["authorId"],
-                "body": i["contentHtml"].replace("\n", "<br>")
-            } 
-            for i in data["comments"]
-        ]
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": "Data formatting failed"})
+    return [
+        {
+            "author": i["author"],
+            "authoricon": i["authorThumbnails"][-1]["url"] if i.get("authorThumbnails") else "",
+            "authorid": i["authorId"],
+            "body": i["contentHtml"].replace("\n", "<br>")
+        } for i in data.get("comments", [])
+    ]
 
 @app.get("/api/stream/{video_id}")
 async def api_proxy_stream_json(video_id: str):
-    data = await fetch_json(f"{STREAM_API_BASE}/{video_id}")
-    return data if data else JSONResponse(status_code=502, content={"error": "Failed to fetch stream"})
-
-# --- サーバー起動用 ---
-import asyncio
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.get(f"{STREAM_API_BASE}/{video_id}")
+            return res.json()
+        except:
+            return JSONResponse(status_code=502, content={"error": "stream failed"})
