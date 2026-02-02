@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YS</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        form {
+            text-align: center;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            letter-spacing: 8px;
+            margin-bottom: 2rem;
+        }
+        input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            font-size: 1rem;
+            outline: none;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            border-bottom-color: #fff;
+        }
+        button {
+            display: none; /* Enterキーで送信させるため非表示 */
+        }
+    </style>
+</head>
+<body>
+
+<form action="/ys" method="POST">
+    <input type="password" name="passcode" placeholder="..." required autofocus>
+    <button type="submit"></button>
+</form>
+
+</body>
+</html>
