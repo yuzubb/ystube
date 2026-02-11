@@ -12,177 +12,127 @@
             --border: rgba(255, 255, 255, 0.1);
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
+            --shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
         }
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body {
             margin: 0; background: var(--bg); color: var(--text-main);
             font-family: "YouTube Sans", "Roboto", -apple-system, sans-serif;
             overflow-x: hidden;
         }
 
-        .container {
-            max-width: 1400px; margin: 0 auto;
-            display: flex; flex-direction: column;
+        /* Loading Spinner & Skeleton */
+        .loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center; background: #000; z-index: 10;
         }
+        .spinner {
+            width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
+        .skeleton {
+            background: var(--panel); position: relative; overflow: hidden; border-radius: 8px;
+        }
+        .skeleton::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--shimmer); animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        /* Layout */
+        .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; }
         @media (min-width: 1001px) {
             .container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 20px; }
         }
-
-        /* Video Section */
-        .player-wrapper {
-            position: sticky; top: 0; z-index: 100; background: var(--bg); width: 100%;
-        }
+        .player-wrapper { position: sticky; top: 0; z-index: 100; background: var(--bg); width: 100%; }
         @media (min-width: 1001px) { .player-wrapper { position: static; } }
-
-        #video-viewport {
-            width: 100%; aspect-ratio: 16/9; background: #000;
-            overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
+        #video-viewport { width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
         @media (min-width: 1001px) { #video-viewport { border-radius: 12px; margin-bottom: 12px; } }
+        video { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.5s; }
+        video.loaded { opacity: 1; }
 
-        video { width: 100%; height: 100%; display: block; }
-
-        /* Content Area */
         .main-info, aside { padding: 12px; }
         @media (min-width: 1001px) { .main-info, aside { padding: 0; } }
-
-        .v-title { font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: bold; margin: 10px 0; line-height: 1.4; }
-
-        /* Quality Bar */
-        .q-bar { 
-            display: flex; gap: 8px; margin-bottom: 15px; 
-            overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; 
-        }
-        .q-bar::-webkit-scrollbar { display: none; }
-        .q-btn {
-            background: var(--panel); border: 1px solid var(--border); color: white;
-            padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
-        }
+        
+        .v-title { font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: bold; margin: 10px 0; line-height: 1.4; min-height: 1.4em; }
+        .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
+        .q-btn { background: var(--panel); border: 1px solid var(--border); color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
         .q-btn.active { background: white; color: black; font-weight: bold; }
 
-        /* Meta Panels */
-        .author-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .c-info { flex: 1; min-width: 0; }
-        .c-name { font-weight: bold; font-size: 0.95rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .author-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; cursor: pointer; }
+        .c-icon { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: var(--panel); }
+        .c-info { flex: 1; }
+        .c-name { font-weight: bold; font-size: 1rem; display: block; }
         .c-subs { font-size: 0.8rem; color: var(--text-sub); }
 
-        .meta-container { background: var(--panel); border-radius: 12px; padding: 12px; margin-bottom: 20px; }
-        .stats-row { font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; }
-        .description { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+        .meta-container { background: var(--panel); border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid var(--border); }
+        .description { font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: #eee; }
 
-        /* --- Comments Section --- */
-        .comments-section { margin-top: 20px; }
-        .comment-item { display: flex; gap: 12px; margin-bottom: 16px; }
-        .comment-icon { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
-        .comment-content { flex: 1; font-size: 0.9rem; }
-        .comment-author { font-weight: bold; font-size: 0.8rem; margin-bottom: 4px; display: block; }
-        .comment-body { line-height: 1.4; color: #f1f1f1; }
-
-        /* Related List */
-        .related-item { display: flex; gap: 10px; text-decoration: none; color: inherit; margin-bottom: 12px; }
+        .related-item { display: flex; gap: 12px; text-decoration: none; color: inherit; margin-bottom: 16px; }
         .r-thumb-wrap { position: relative; width: 40%; max-width: 160px; flex-shrink: 0; }
-        .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: #222; }
-        
-        .badge {
-            position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
-            padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
-        }
-        .playlist-overlay {
-            position: absolute; top: 0; right: 0; bottom: 0; width: 35%;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border-top-right-radius: 8px; border-bottom-right-radius: 8px;
-        }
-
+        .r-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 10px; object-fit: cover; background: var(--panel); }
+        .badge { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
         .r-info { flex: 1; min-width: 0; }
-        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; margin-bottom: 4px; }
+        .r-title { font-size: 0.9rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; margin-bottom: 4px; }
         .r-meta { font-size: 0.75rem; color: var(--text-sub); }
     </style>
 </head>
 <body>
-
 <div class="container">
     <div class="player-wrapper">
         <div id="video-viewport">
+            <div id="loader" class="loading-overlay"><div class="spinner"></div></div>
             <video id="main-video" controls autoplay playsinline></video>
         </div>
     </div>
-
     <main class="main-info">
-        <h1 class="v-title" id="v-title">Loading...</h1>
+        <h1 class="v-title" id="v-title"><div class="skeleton" style="width:80%; height:1.2em;"></div></h1>
         <div class="q-bar" id="q-bar"></div>
-
-        <div class="author-row">
-            <img id="c-icon" src="" class="c-icon">
+        <div class="author-row" id="author-click">
+            <div id="c-icon-placeholder" class="skeleton c-icon"></div>
+            <img id="c-icon" src="" class="c-icon" style="display:none;">
             <div class="c-info">
-                <span id="c-name" class="c-name">---</span>
-                <span id="c-subs" class="c-subs">--- subscribers</span>
+                <span id="c-name" class="c-name"><div class="skeleton" style="width:120px; height:1em;"></div></span>
+                <span id="c-subs" class="c-subs"></span>
             </div>
         </div>
-
         <div class="meta-container">
-            <div class="stats-row">
-                <span id="v-views">--</span> • <span id="v-date">--</span> • 👍 <span id="v-likes">--</span>
-            </div>
-            <div id="v-desc" class="description"></div>
+            <div id="v-desc" class="description"><div class="skeleton" style="width:100%; height:4em;"></div></div>
         </div>
-
-        <div class="comments-section">
-            <h3 id="comment-count" style="font-size: 1.1rem; margin-bottom: 15px;">Comments</h3>
-            <div id="comments-list">
-                <p style="color:var(--text-sub); font-size:0.9rem;">Loading comments...</p>
-            </div>
-        </div>
+        <div id="comments-list"></div>
     </main>
-
     <aside id="related-box"></aside>
 </div>
-
 <script>
     const vId = "{{ video_id }}";
     const video = document.getElementById('main-video');
-
     async function init() {
         try {
-            // 1. Details Fetch
             const res = await fetch(`/api/details/${vId}`);
             const data = await res.json();
-
+            
             document.getElementById('v-title').innerText = data.title;
-            document.getElementById('v-views').innerText = data.views;
-            document.getElementById('v-date').innerText = data.relativeDate;
-            document.getElementById('v-likes').innerText = data.likes;
             document.getElementById('c-name').innerText = data.author.name;
             document.getElementById('c-subs').innerText = data.author.subscribers;
             document.getElementById('c-icon').src = data.author.thumbnail;
+            document.getElementById('c-icon').style.display = 'block';
+            document.getElementById('c-icon-placeholder').style.display = 'none';
             document.getElementById('v-desc').innerText = data.description.text;
+            document.getElementById('author-click').onclick = () => location.href = `/channel/${data.author.id}`;
 
-            // Related Videos
             if (data["Related-videos"]) {
-                const box = document.getElementById('related-box');
-                box.innerHTML = `<div class="section-title" style="font-weight:bold; margin-bottom:15px;">Related</div>` + 
-                data["Related-videos"].relatedVideos.map(rv => {
+                document.getElementById('related-box').innerHTML = data["Related-videos"].relatedVideos.map(rv => {
                     const isPL = rv.type === "playlist";
-                    return `
-                        <a href="/watch?v=${rv.videoId}${isPL ? '&list='+rv.playlistId : ''}" class="related-item">
-                            <div class="r-thumb-wrap">
-                                <img src="${rv.thumbnail}" class="r-thumb">
-                                ${isPL ? `<div class="playlist-overlay"><span style="font-size:12px;">☰</span></div>` : `<span class="badge">${rv.duration}</span>`}
-                            </div>
-                            <div class="r-info">
-                                <div class="r-title">${rv.title}</div>
-                                ${!isPL ? `<div class="r-meta">${rv.channelName}</div><div class="r-meta">${rv.viewCountText}</div>` : `<div class="r-meta" style="color:var(--accent);">PLAYLIST</div>`}
-                            </div>
-                        </a>
-                    `;
+                    return `<a href="/watch?v=${rv.videoId}${isPL ? '&list='+rv.playlistId : ''}" class="related-item">
+                        <div class="r-thumb-wrap"><img src="${rv.thumbnail}" class="r-thumb">${isPL ? '' : `<span class="badge">${rv.duration}</span>`}</div>
+                        <div class="r-info"><div class="r-title">${rv.title}</div><div class="r-meta">${rv.channelName}</div></div>
+                    </a>`;
                 }).join('');
             }
 
-            // 2. Stream Fetch
             const sRes = await fetch(`/api/stream/${vId}`);
             const sData = await sRes.json();
             if (sData.formats) {
@@ -195,48 +145,37 @@
                     b.onclick = () => {
                         const t = video.currentTime;
                         document.querySelectorAll('.q-btn').forEach(btn => btn.classList.remove('active'));
-                        b.classList.add('active');
-                        video.src = f.url; video.currentTime = t; video.play();
+                        b.classList.add('active'); video.src = f.url; video.currentTime = t; video.play();
                     };
                     qBar.appendChild(b);
                 });
                 const def = vFmts.find(f => f.itag === "18") || vFmts[0];
-                if (def) video.src = def.url;
+                if (def) {
+                    video.src = def.url;
+                    video.onloadeddata = () => {
+                        video.classList.add('loaded');
+                        document.getElementById('loader').style.display = 'none';
+                    };
+                }
             }
-
-            // 3. Comments Fetch (独立して取得)
             fetchComments();
-
         } catch (e) { console.error(e); }
     }
-
     async function fetchComments() {
         try {
             const cRes = await fetch(`/api/comments/${vId}`);
             const comments = await cRes.json();
-            const listEl = document.getElementById('comments-list');
-
-            if (!comments || comments.length === 0 || comments.error) {
-                listEl.innerHTML = `<p style="color:var(--text-sub); font-size:0.9rem;">No comments available.</p>`;
-                return;
-            }
-
-            listEl.innerHTML = comments.map(c => `
-                <div class="comment-item">
-                    <img src="${c.authoricon}" class="comment-icon" onerror="this.src='https://www.youtube.com/img/desktop/ftbc/default_avatar.png'">
-                    <div class="comment-content">
-                        <span class="comment-author">${c.author}</span>
-                        <div class="comment-body">${c.body}</div>
+            document.getElementById('comments-list').innerHTML = comments.map(c => `
+                <div style="display:flex; gap:12px; margin-bottom:16px;">
+                    <a href="/channel/${c.authorid}"><img src="${c.authoricon}" style="width:36px; height:36px; border-radius:50%; background:var(--panel);"></a>
+                    <div>
+                        <a href="/channel/${c.authorid}" style="text-decoration:none; color:inherit; font-weight:bold; font-size:0.85rem;">${c.author}</a>
+                        <div style="font-size:0.9rem; color:#eee; margin-top:2px;">${c.body}</div>
                     </div>
                 </div>
             `).join('');
-
-        } catch (e) {
-            console.error("Comment error:", e);
-            document.getElementById('comments-list').innerHTML = `<p style="color:var(--text-sub); font-size:0.9rem;">Failed to load comments.</p>`;
-        }
+        } catch (e) { }
     }
-
     init();
 </script>
 </body>
