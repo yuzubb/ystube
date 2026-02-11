@@ -111,6 +111,39 @@ async def view_watch(request: Request, v: str, list: Optional[str] = None, _=Dep
         return templates.TemplateResponse("playlist.html", {"request": request, "video_id": v, "playlist_id": list})
     return templates.TemplateResponse("watch.html", {"request": request, "video_id": v})
 
+@app.get("/channel/{channel_id}", response_class=HTMLResponse)
+async def view_channel(request: Request, channel_id: str, _=Depends(verify_auth)):
+    return templates.TemplateResponse("channel.html", {"request": request, "channel_id": channel_id})
+
+@app.get("/api/channel/{channel_id}")
+async def api_get_channel(channel_id: str):
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            # 1. チャンネルの動画リストを取得
+            backend_url = f"https://yudlp.vercel.app/channel/{channel_id}"
+            res = await client.get(backend_url)
+            data = res.json()
+
+            # 2. アイコン取得（Invidious APIを並列で叩いて補完）
+            # handleが@で始まる場合とIDの場合両方に対応
+            path = f"/channels/{channel_id}"
+            inv_data = await request_invidious_parallel(path, COMMENT_API_INSTANCES)
+            
+            icon_url = ""
+            if inv_data and "authorThumbnails" in inv_data:
+                icon_url = inv_data["authorThumbnails"][-1]["url"]
+
+            # レスポンスの構築
+            return {
+                "channel_id": data.get("channel_id"),
+                "name": data.get("name"),
+                "icon": icon_url,
+                "videos": data.get("videos", [])
+            }
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "channel api failed", "details": str(e)})
+
+
 @app.get("/api/playlist/watch")
 async def api_get_playlist_mix(v: str, list: str):
     async with httpx.AsyncClient(timeout=15.0) as client:
