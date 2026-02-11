@@ -15,31 +15,39 @@
             --shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            margin: 0; background: var(--bg); color: var(--text-main);
-            font-family: "YouTube Sans", "Roboto", -apple-system, sans-serif;
-            overflow-x: hidden;
-        }
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: "YouTube Sans", "Roboto", sans-serif; overflow-x: hidden; }
 
-        /* Loading */
-        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10; }
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .skeleton { background: var(--panel); position: relative; overflow: hidden; border-radius: 6px; }
         .skeleton::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--shimmer); animation: shimmer 1.5s infinite; }
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
+        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; }
         @media (min-width: 1001px) { .container { display: grid; grid-template-columns: 1fr 400px; gap: 24px; padding: 20px; } }
         
-        #video-viewport { width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #video-viewport { width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; position: relative; }
         @media (min-width: 1001px) { #video-viewport { border-radius: 12px; } }
         video { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.5s; }
         video.loaded { opacity: 1; }
 
         .main-info { padding: 12px; }
+        .v-title { font-size: 1.2rem; font-weight: bold; margin: 10px 0; line-height: 1.4; }
+
+        /* 画質ボタンのスタイルを修正 */
+        .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+        .q-bar::-webkit-scrollbar { display: none; }
+        .q-btn { 
+            background: var(--panel); border: 1px solid var(--border); color: white; 
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; 
+            font-size: 0.85rem; white-space: nowrap; transition: 0.2s;
+        }
+        .q-btn.active { background: white; color: black; font-weight: bold; border-color: white; }
+
         .author-row { display: flex; align-items: center; gap: 12px; margin: 15px 0; cursor: pointer; }
-        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--panel); }
+        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 
         .playlist-aside { background: var(--panel); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
         @media (min-width: 1001px) { .playlist-aside { position: sticky; top: 20px; height: calc(100vh - 40px); } }
@@ -61,23 +69,20 @@
     </div>
     <main class="main-info">
         <h1 class="v-title" id="v-title"><div class="skeleton" style="width:70%; height:1.2em;"></div></h1>
-        <div class="q-bar" id="q-bar" style="display:flex; gap:8px; margin-bottom:15px;"></div>
+        <div id="q-bar" class="q-bar"></div>
         <div class="author-row" id="author-click">
             <div id="c-icon-placeholder" class="skeleton c-icon"></div>
             <img id="c-icon" src="" class="c-icon" style="display:none;">
-            <div class="c-info">
-                <span id="c-name" class="c-name" style="font-weight:bold;"><div class="skeleton" style="width:100px; height:1em;"></div></span>
-            </div>
+            <div class="c-info"><span id="c-name" style="font-weight:bold;"><div class="skeleton" style="width:100px; height:1em;"></div></span></div>
         </div>
-        <div id="v-desc" style="background:var(--panel); padding:12px; border-radius:10px; font-size:0.85rem; white-space:pre-wrap;"><div class="skeleton" style="width:100%; height:3em;"></div></div>
+        <div id="v-desc" style="background:var(--panel); padding:12px; border-radius:10px; font-size:0.85rem; white-space:pre-wrap;"></div>
     </main>
     <aside class="playlist-aside">
         <div class="playlist-header">
             <h3 id="pl-title" style="margin:0; font-size:1rem;">Playlist</h3>
             <p id="pl-count" style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-sub);"></p>
         </div>
-        <div class="playlist-list" id="playlist-list">
-            </div>
+        <div class="playlist-list" id="playlist-list"></div>
     </aside>
 </div>
 <script>
@@ -121,22 +126,21 @@
                 const vFmts = sData.formats.filter(f => f.resolution !== "audio only");
                 vFmts.forEach(f => {
                     const b = document.createElement('button');
+                    // CSSクラスを付与するように変更
                     b.className = 'q-btn' + (f.itag === "18" ? " active" : "");
                     b.innerText = f.resolution;
                     b.onclick = () => {
                         const t = video.currentTime;
                         document.querySelectorAll('.q-btn').forEach(btn => btn.classList.remove('active'));
-                        b.classList.add('active'); video.src = f.url; video.currentTime = t; video.play();
+                        b.classList.add('active');
+                        video.src = f.url; video.currentTime = t; video.play();
                     };
                     qBar.appendChild(b);
                 });
                 const def = vFmts.find(f => f.itag === "18") || vFmts[0];
                 if (def) {
                     video.src = def.url;
-                    video.onloadeddata = () => {
-                        video.classList.add('loaded');
-                        document.getElementById('loader').style.display = 'none';
-                    };
+                    video.onloadeddata = () => { video.classList.add('loaded'); document.getElementById('loader').style.display = 'none'; };
                 }
             }
             video.onended = () => { if (nextVideoId) location.href = `/watch?v=${nextVideoId}&list=${plId}`; };
