@@ -3,7 +3,8 @@ import httpx
 import urllib.parse
 import datetime
 import asyncio
-from fastapi import FastAPI, Request, Form, HTTPException, Depends
+from typing import Optional
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.status import HTTP_303_SEE_OTHER
@@ -16,6 +17,7 @@ AUTH_COOKIE = "ys_auth"
 AUTH_VALUE = "authenticated_user"
 DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
+PLAYLIST_API_BASE = "https://yudlp.vercel.app/playlist"
 
 # 提供されたファイルに基づいたインスタンスリスト
 SEARCH_API_INSTANCES = [
@@ -99,7 +101,6 @@ async def action_login(passcode: str = Form(...)):
 
 @app.get("/search", response_class=HTMLResponse)
 async def view_search(request: Request, q: str, page: int = 1, _=Depends(verify_auth)):
-    """youtubesearchpython の代わりに Invidious API を使用"""
     path = f"/search?q={urllib.parse.quote(q)}&page={page}&hl=jp"
     data = await request_invidious_parallel(path, SEARCH_API_INSTANCES + COMMENT_API_INSTANCES)
     
@@ -119,6 +120,21 @@ async def view_watch(request: Request, v: str, _=Depends(verify_auth)):
     return templates.TemplateResponse("watch.html", {"request": request, "video_id": v})
 
 # --- API Endpoints ---
+
+@app.get("/api/playlist/watch")
+async def api_get_playlist_mix(v: str, list: str):
+    """
+    Mixリスト用: /api/playlist/watch?v={videoid}&list={playlistid}
+    yudlp側の /playlist/{playlistid}?v={videoid} を叩いて結果を返す
+    """
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            # 内部で yudlp.vercel.app のエンドポイントへ転送
+            backend_url = f"{PLAYLIST_API_BASE}/{list}?v={v}"
+            res = await client.get(backend_url)
+            return res.json()
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "playlist api failed", "details": str(e)})
 
 @app.get("/api/details/{video_id}")
 async def api_video_details(video_id: str):
