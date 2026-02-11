@@ -17,7 +17,7 @@ AUTH_VALUE = "authenticated_user"
 DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
 STREAM_API_BASE = "https://yudlp.vercel.app/stream"
 
-# 提供されたファイルに基づいたインスタンスリスト
+# インスタンスリスト
 SEARCH_API_INSTANCES = [
     'https://api-five-zeta-55.vercel.app/',
 ]
@@ -42,7 +42,9 @@ async def verify_auth(request: Request):
 
 async def request_invidious_parallel(path: str, instances: list):
     """並列でリクエストを送り、最初に成功したJSONを返す"""
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'
+    }
     async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
         tasks = [client.get(f"{api}api/v1{path}", headers=headers) for api in instances]
         for future in asyncio.as_completed(tasks):
@@ -55,25 +57,46 @@ async def request_invidious_parallel(path: str, instances: list):
     return None
 
 def format_search_item(i):
-    """提供されたコードの formatSearchData ロジックを適用"""
+    """
+    検索結果の整形ロジック
+    RDから始まるプレイリストIDの場合は、指定のURL形式を生成する
+    """
     t = i.get("type")
+    
     if t == "video":
+        video_id = i.get("videoId")
         return {
             "type": "video",
             "title": i.get("title"),
-            "id": i.get("videoId"),
+            "id": video_id,
             "author": i.get("author"),
             "published": i.get("publishedText"),
             "length": str(datetime.timedelta(seconds=i.get("lengthSeconds", 0))),
-            "view_count_text": i.get("viewCountText")
+            "view_count_text": i.get("viewCountText"),
+            "url": f"/watch?v={video_id}"
         }
+    
     elif t == "playlist":
+        playlist_id = i.get("playlistId", "")
+        # Invidious APIでは動画リストの最初からvideoIdが取れる場合がある
+        videos = i.get("videos", [])
+        first_video_id = videos[0].get("videoId") if videos else ""
+
+        # RDから始まるIDの判定
+        if playlist_id.startswith("RD"):
+            # 指定された形式: YouTube公式のWatchリンク
+            url = f"https://www.youtube.com/watch?v={first_video_id}&list={playlist_id}"
+        else:
+            # 通常のプレイリスト（内部または公式リンク）
+            url = f"/playlist?list={playlist_id}"
+
         return {
             "type": "playlist",
             "title": i.get("title"),
-            "id": i.get("playlistId"),
+            "id": playlist_id,
             "thumbnail": i.get("playlistThumbnail"),
-            "count": i.get("videoCount")
+            "count": i.get("videoCount"),
+            "url": url
         }
     return None
 
@@ -99,12 +122,12 @@ async def action_login(passcode: str = Form(...)):
 
 @app.get("/search", response_class=HTMLResponse)
 async def view_search(request: Request, q: str, page: int = 1, _=Depends(verify_auth)):
-    """youtubesearchpython の代わりに Invidious API を使用"""
     path = f"/search?q={urllib.parse.quote(q)}&page={page}&hl=jp"
     data = await request_invidious_parallel(path, SEARCH_API_INSTANCES + COMMENT_API_INSTANCES)
     
     results = []
     if data:
+        # dataがリスト形式で返ってくることを想定
         results = [format_search_item(i) for i in data if format_search_item(i)]
 
     return templates.TemplateResponse("search.html", {
