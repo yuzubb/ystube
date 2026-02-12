@@ -1,187 +1,266 @@
-import json
-import httpx
-import urllib.parse
-import datetime
+from fastapi import FastAPI, HTTPException, Query
+from yt_dlp import YoutubeDL
+import time
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from fastapi import FastAPI, Request, Form, HTTPException, Depends, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from starlette.status import HTTP_303_SEE_OTHER
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
 
-AUTH_COOKIE = "ys_auth"
-AUTH_VALUE = "authenticated_user"
-DETAILS_API_BASE = "https://siawaseok.duckdns.org/api/video2"
-STREAM_API_BASE = "https://yudlp.vercel.app/stream"
-PLAYLIST_API_BASE = "https://yudlp.vercel.app/playlist"
+# --- CORS設定 ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-SEARCH_API_INSTANCES = [
-    'https://api-five-zeta-55.vercel.app/',
-]
-COMMENT_API_INSTANCES = [
-    'https://invidious.lunivers.trade/',
-    'https://invidious.ducks.party/',
-    'https://super8.absturztau.be/',
-    'https://invidious.nikkosphere.com/',
-    'https://yt.omada.cafe/',
-    'https://iv.melmac.space/',
-    'https://iv.duti.dev/',
-]
+executor = ThreadPoolExecutor()
 
-def is_auth(request: Request) -> bool:
-    return request.cookies.get(AUTH_COOKIE) == AUTH_VALUE
+# --- yt-dlp 基本設定 ---
+ydl_opts_base = {
+    "quiet": True,
+    "skip_download": True,
+    "nocheckcertificate": True,
+    "format": "best",
+    "proxy": "http://ytproxy-siawaseok.duckdns.org:3007"
+}
 
-async def verify_auth(request: Request):
-    if not is_auth(request):
-        raise HTTPException(status_code=303, headers={"Location": "/ys"})
+ydl_opts_flat = {
+    **ydl_opts_base,
+    "extract_flat": "in_playlist",
+    "playlist_items": "1-50",
+    "lazy_playlist": True,
+}
 
-async def request_invidious_parallel(path: str, instances: list):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'}
-    async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-        tasks = [client.get(f"{api}api/v1{path}", headers=headers) for api in instances]
-        for future in asyncio.as_completed(tasks):
-            try:
-                response = await future
-                if response.status_code == 200:
-                    return response.json()
-            except:
-                continue
-    return None
+# --- キャッシュ & 処理中管理 ---
+# 構造: { id: (取得時刻, データ本体, 有効期間秒) }
+VIDEO_CACHE = {}      
+PLAYLIST_CACHE = {}
+CHANNEL_CACHE = {}
+PROCESSING_IDS = set()
 
-def format_search_item(i):
-    t = i.get("type")
-    if t == "video":
+# キャッシュ時間設定
+DEFAULT_CACHE_DURATION = 600    # 10分
+LONG_CACHE_DURATION = 14200     # 4時間
+CHANNEL_CACHE_DURATION = 86400  # 24時間
+
+def cleanup_cache():
+    """期限切れのキャッシュを削除"""
+    now = time.time()
+    for cache in [VIDEO_CACHE, PLAYLIST_CACHE, CHANNEL_CACHE]:
+        expired = [k for k, (ts, _, dur) in cache.items() if now - ts >= dur]
+        for k in expired:
+            del cache[k]
+
+def get_best_thumbnail(thumbnails):
+    if not thumbnails: return None
+    return thumbnails[-1].get("url")
+
+# --- システム・管理 API ---
+
+@app.get("/status")
+def get_status():
+    return {
+        "processing_count": len(PROCESSING_IDS),
+        "processing_ids": list(PROCESSING_IDS)
+    }
+
+@app.get("/api/2/cache")
+def list_cache():
+    now = time.time()
+    def format_map(c):
         return {
-            "type": "video",
-            "title": i.get("title"),
-            "id": i.get("videoId"),
-            "author": i.get("author"),
-            "published": i.get("publishedText"),
-            "length": str(datetime.timedelta(seconds=i.get("lengthSeconds", 0))),
-            "view_count_text": i.get("viewCountText")
+            k: {
+                "age_sec": int(now - v[0]),
+                "remaining_sec": int(v[2] - (now - v[0])),
+                "total_duration": v[2]
+            } for k, v in c.items()
         }
-    elif t == "playlist":
-        return {
-            "type": "playlist",
-            "title": i.get("title"),
-            "id": i.get("playlistId"),
-            "thumbnail": i.get("playlistThumbnail"),
-            "count": i.get("videoCount")
+    return {
+        "video_streams": format_map(VIDEO_CACHE),
+        "playlists": format_map(PLAYLIST_CACHE),
+        "channels": format_map(CHANNEL_CACHE)
+    }
+
+@app.delete("/api/2/cache/{item_id}")
+def delete_cache(item_id: str):
+    deleted = False
+    for cache in [VIDEO_CACHE, PLAYLIST_CACHE, CHANNEL_CACHE]:
+        if item_id in cache:
+            del cache[item_id]
+            deleted = True
+    if deleted:
+        return {"status": "success", "message": f"ID: {item_id} のキャッシュを削除しました。"}
+    raise HTTPException(status_code=404, detail="キャッシュが存在しません。")
+
+# --- メイン API (動画 / m3u8) ---
+
+@app.get("/stream/{video_id}")
+async def get_streams(video_id: str):
+    cleanup_cache()
+    if video_id in VIDEO_CACHE:
+        ts, data, dur = VIDEO_CACHE[video_id]
+        if time.time() - ts < dur: return data
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    PROCESSING_IDS.add(video_id)
+    try:
+        def fetch():
+            with YoutubeDL(ydl_opts_base) as ydl:
+                return ydl.extract_info(url, download=False)
+        
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(executor, fetch)
+        
+        formats = [{
+            "itag": f.get("format_id"),
+            "ext": f.get("ext"),
+            "resolution": f.get("resolution"),
+            "url": f.get("url")
+        } for f in info.get("formats", []) if f.get("url") and f.get("ext") != "mhtml"]
+
+        res = {"title": info.get("title"), "id": video_id, "formats": formats}
+        # フォーマット数が多い場合は人気動画とみなし、長めにキャッシュ
+        dur = LONG_CACHE_DURATION if len(formats) >= 12 else DEFAULT_CACHE_DURATION
+        VIDEO_CACHE[video_id] = (time.time(), res, dur)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        PROCESSING_IDS.discard(video_id)
+
+@app.get("/m3u8/{video_id}")
+async def get_m3u8(video_id: str):
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    PROCESSING_IDS.add(video_id)
+    try:
+        def fetch():
+            opts = {**ydl_opts_base, "user_agent": "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)"}
+            with YoutubeDL(opts) as ydl:
+                return ydl.extract_info(url, download=False)
+
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(executor, fetch)
+        
+        streams = [{"url": f.get("url"), "resolution": f.get("resolution"), "protocol": f.get("protocol"), "ext": f.get("ext")}
+                   for f in info.get("formats", []) if f.get("protocol") == "m3u8_native" or ".m3u8" in f.get("url", "")]
+
+        if not streams and info.get("hls_url"):
+            streams.append({"url": info.get("hls_url"), "resolution": "adaptive", "protocol": "m3u8_native", "ext": "m3u8"})
+
+        return {"title": info.get("title"), "video_id": video_id, "m3u8_streams": streams}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        PROCESSING_IDS.discard(video_id)
+
+# --- プレイリスト / チャンネル / ショート API ---
+
+@app.get("/playlist/{playlist_id}")
+async def get_playlist(playlist_id: str, v: Optional[str] = Query(None)):
+    cleanup_cache()
+    cache_key = f"{playlist_id}_{v}" if v else playlist_id
+    if cache_key in PLAYLIST_CACHE:
+        ts, data, dur = PLAYLIST_CACHE[cache_key]
+        if time.time() - ts < dur: return data
+    
+    if playlist_id.startswith("RD"):
+        url = f"https://www.youtube.com/watch?v={v}&list={playlist_id}" if v else f"https://www.youtube.com/watch?list={playlist_id}"
+    else:
+        url = f"https://www.youtube.com/playlist?list={playlist_id}"
+    
+    PROCESSING_IDS.add(playlist_id)
+    try:
+        def fetch():
+            with YoutubeDL(ydl_opts_flat) as ydl:
+                return ydl.extract_info(url, download=False)
+        
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(executor, fetch)
+        entries = [{"id": e.get("id"), "title": e.get("title"), "thumbnail": get_best_thumbnail(e.get("thumbnails"))}
+                   for e in info.get("entries", []) if e]
+        
+        res = {"id": playlist_id, "title": info.get("title"), "video_count": len(entries), "entries": entries}
+        cache_dur = 7200 if playlist_id.startswith("RD") else LONG_CACHE_DURATION
+        PLAYLIST_CACHE[cache_key] = (time.time(), res, cache_dur)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        PROCESSING_IDS.discard(playlist_id)
+
+@app.get("/short/{channel_id}")
+async def get_shorts(channel_id: str):
+    cleanup_cache()
+    cache_key = f"shorts_{channel_id}"
+    if cache_key in CHANNEL_CACHE:
+        ts, data, dur = CHANNEL_CACHE[cache_key]
+        if time.time() - ts < dur: return data
+
+    base_path = channel_id if channel_id.startswith("@") else f"channel/{channel_id}"
+    url = f"https://www.youtube.com/{base_path}/shorts"
+    
+    PROCESSING_IDS.add(cache_key)
+    try:
+        def fetch():
+            with YoutubeDL(ydl_opts_flat) as ydl:
+                return ydl.extract_info(url, download=False)
+        
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(executor, fetch)
+        shorts = [{"id": e.get("id"), "title": e.get("title"), "thumbnail": get_best_thumbnail(e.get("thumbnails")), "view_count": e.get("view_count")}
+                  for e in info.get("entries", []) if e]
+        
+        res = {"channel_id": info.get("id"), "name": info.get("uploader") or info.get("channel"), "shorts": shorts}
+        CHANNEL_CACHE[cache_key] = (time.time(), res, CHANNEL_CACHE_DURATION)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        PROCESSING_IDS.discard(cache_key)
+
+@app.get("/channel/{channel_id}")
+async def get_channel(channel_id: str):
+    cleanup_cache()
+    if channel_id in CHANNEL_CACHE:
+        ts, data, dur = CHANNEL_CACHE[channel_id]
+        if time.time() - ts < dur: return data
+    
+    url = f"https://www.youtube.com/{channel_id}/videos" if channel_id.startswith("@") else f"https://www.youtube.com/channel/{channel_id}/videos"
+    
+    PROCESSING_IDS.add(channel_id)
+    try:
+        def fetch():
+            with YoutubeDL(ydl_opts_flat) as ydl:
+                return ydl.extract_info(url, download=False)
+        
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(executor, fetch)
+        
+        # メタデータの抽出
+        thumbnails = info.get("thumbnails", [])
+        res = {
+            "channel_id": info.get("id"),
+            "name": info.get("uploader") or info.get("channel"),
+            "description": info.get("description"),
+            "subscriber_count": info.get("subscriber_count"),
+            "avatar": thumbnails[0].get("url") if thumbnails else None,
+            "banner": thumbnails[-1].get("url") if thumbnails else None,
+            "videos": [{"id": e.get("id"), "title": e.get("title"), "view_count": e.get("view_count"), 
+                        "thumbnail": get_best_thumbnail(e.get("thumbnails")), "duration": e.get("duration")}
+                       for e in info.get("entries", []) if e]
         }
-    return None
+        
+        CHANNEL_CACHE[channel_id] = (time.time(), res, CHANNEL_CACHE_DURATION)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        PROCESSING_IDS.discard(channel_id)
 
-@app.get("/", response_class=HTMLResponse)
-async def view_index(request: Request):
-    if not is_auth(request): return RedirectResponse("/ys")
-    return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/ys", response_class=HTMLResponse)
-async def view_login(request: Request):
-    if is_auth(request): return RedirectResponse("/")
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.post("/ys")
-async def action_login(passcode: str = Form(...)):
-    if passcode == "yuzu":
-        response = RedirectResponse("/", status_code=HTTP_303_SEE_OTHER)
-        response.set_cookie(key=AUTH_COOKIE, value=AUTH_VALUE, httponly=True)
-        return response
-    return RedirectResponse("/ys", status_code=HTTP_303_SEE_OTHER)
-
-@app.get("/search", response_class=HTMLResponse)
-async def view_search(request: Request, q: str, page: int = 1, _=Depends(verify_auth)):
-    path = f"/search?q={urllib.parse.quote(q)}&page={page}&hl=jp"
-    data = await request_invidious_parallel(path, SEARCH_API_INSTANCES + COMMENT_API_INSTANCES)
-    results = []
-    if data:
-        results = [format_search_item(i) for i in data if format_search_item(i)]
-    return templates.TemplateResponse("search.html", {
-        "request": request,
-        "results": results,
-        "word": q,
-        "next": f"/search?q={q}&page={page + 1}"
-    })
-
-@app.get("/watch", response_class=HTMLResponse)
-async def view_watch(request: Request, v: str, list: Optional[str] = None, _=Depends(verify_auth)):
-    if list:
-        return templates.TemplateResponse("playlist.html", {"request": request, "video_id": v, "playlist_id": list})
-    return templates.TemplateResponse("watch.html", {"request": request, "video_id": v})
-
-@app.get("/channel/{channel_id}", response_class=HTMLResponse)
-async def view_channel(request: Request, channel_id: str, _=Depends(verify_auth)):
-    return templates.TemplateResponse("channel.html", {"request": request, "channel_id": channel_id})
-
-@app.get("/api/channel/{channel_id}")
-async def api_get_channel(channel_id: str):
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            # 1. チャンネルの動画リストを取得
-            backend_url = f"https://yudlp.vercel.app/channel/{channel_id}"
-            res = await client.get(backend_url)
-            data = res.json()
-
-            # 2. アイコン取得（Invidious APIを並列で叩いて補完）
-            # handleが@で始まる場合とIDの場合両方に対応
-            path = f"/channels/{channel_id}"
-            inv_data = await request_invidious_parallel(path, COMMENT_API_INSTANCES)
-            
-            icon_url = ""
-            if inv_data and "authorThumbnails" in inv_data:
-                icon_url = inv_data["authorThumbnails"][-1]["url"]
-
-            # レスポンスの構築
-            return {
-                "channel_id": data.get("channel_id"),
-                "name": data.get("name"),
-                "icon": icon_url,
-                "videos": data.get("videos", [])
-            }
-        except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "channel api failed", "details": str(e)})
-
-
-@app.get("/api/playlist/watch")
-async def api_get_playlist_mix(v: str, list: str):
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            backend_url = f"{PLAYLIST_API_BASE}/{list}?v={v}"
-            res = await client.get(backend_url)
-            return res.json()
-        except Exception as e:
-            return JSONResponse(status_code=502, content={"error": "playlist api failed", "details": str(e)})
-
-@app.get("/api/details/{video_id}")
-async def api_video_details(video_id: str):
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            res = await client.get(f"{DETAILS_API_BASE}/{video_id}?depth=1")
-            return res.json()
-        except:
-            return JSONResponse(status_code=502, content={"error": "details failed"})
-
-@app.get("/api/comments/{video_id}")
-async def api_get_comments(video_id: str):
-    path = f"/comments/{urllib.parse.quote(video_id)}"
-    data = await request_invidious_parallel(path, COMMENT_API_INSTANCES)
-    if not data: return JSONResponse(status_code=502, content={"error": "comments failed"})
-    return [
-        {
-            "author": i["author"],
-            "authoricon": i["authorThumbnails"][-1]["url"] if i.get("authorThumbnails") else "",
-            "authorid": i["authorId"],
-            "body": i["contentHtml"].replace("\n", "<br>")
-        } for i in data.get("comments", [])
-    ]
-
-@app.get("/api/stream/{video_id}")
-async def api_proxy_stream_json(video_id: str):
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            res = await client.get(f"{STREAM_API_BASE}/{video_id}")
-            return res.json()
-        except:
-            return JSONResponse(status_code=502, content={"error": "stream failed"})
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
