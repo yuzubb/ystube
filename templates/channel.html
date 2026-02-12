@@ -15,69 +15,53 @@
             --shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            margin: 0; background: var(--bg); color: var(--text-main);
-            font-family: "YouTube Sans", "Roboto", sans-serif;
-            overflow-x: hidden;
-        }
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: "YouTube Sans", "Roboto", sans-serif; overflow-x: hidden; }
 
-        /* 進化したローディング UI */
-        .skeleton {
-            background: rgba(255,255,255,0.05); position: relative; overflow: hidden; border-radius: 12px;
-        }
-        .skeleton::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--shimmer); animation: shimmer 2s infinite linear;
-        }
+        /* スタイリッシュなローディング */
+        .skeleton { background: rgba(255,255,255,0.05); position: relative; overflow: hidden; border-radius: 12px; }
+        .skeleton::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--shimmer); animation: shimmer 2s infinite linear; }
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            background: var(--bg); z-index: 1000; transition: opacity 0.6s ease;
-        }
-        .spinner {
-            width: 48px; height: 48px; position: relative;
-        }
-        .spinner::before, .spinner::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            border: 3px solid transparent; border-top-color: var(--accent); border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-        }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 1000; transition: opacity 0.6s ease; }
+        .spinner { width: 48px; height: 48px; position: relative; }
+        .spinner::before, .spinner::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px solid transparent; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
         .spinner::after { border-top-color: rgba(0, 212, 255, 0.2); animation-delay: 0.1s; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Layout */
-        .container { max-width: 1280px; margin: 0 auto; padding: 0 20px 40px; }
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 16px 40px; }
         
-        .channel-header {
-            display: flex; align-items: center; gap: 32px; padding: 60px 0 40px;
-            border-bottom: 1px solid var(--border); margin-bottom: 40px;
-        }
-        .ch-icon { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-        .ch-name { font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+        /* チャンネルヘッダー */
+        .channel-header { display: flex; align-items: center; gap: 24px; padding: 40px 0 20px; }
+        .ch-icon { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .ch-name { font-size: 2rem; font-weight: 800; margin: 0; }
         
-        /* Grid */
-        .video-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 32px 20px;
-        }
-        .v-card { text-decoration: none; color: inherit; display: block; transform: translateY(0); transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1); }
-        .v-card:hover { transform: translateY(-6px); }
-        
-        .v-thumb-wrap { width: 100%; aspect-ratio: 16/9; margin-bottom: 14px; position: relative; border-radius: 12px; overflow: hidden; background: var(--panel); }
-        .v-thumb { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
-        
-        .v-title { font-size: 1rem; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; color: #f1f1f1; }
-        .v-meta { font-size: 0.85rem; color: var(--text-sub); display: flex; gap: 8px; }
+        /* タブメニュー */
+        .tab-bar { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; position: sticky; top: 0; background: var(--bg); z-index: 100; }
+        .tab-btn { background: none; border: none; color: var(--text-sub); padding: 12px 4px; font-size: 1rem; font-weight: bold; cursor: pointer; position: relative; transition: 0.3s; }
+        .tab-btn.active { color: var(--text-main); }
+        .tab-btn.active::after { content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--text-main); border-radius: 3px; }
 
-        /* Content Transition */
-        #content { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease, transform 0.8s ease; }
-        #content.visible { opacity: 1; transform: translateY(0); }
+        /* グリッドレイアウト */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 16px; }
+        /* Shorts用グリッド（縦長） */
+        .shorts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px 8px; }
+
+        .v-card { text-decoration: none; color: inherit; display: block; transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1); opacity: 0; transform: translateY(15px); }
+        .v-card.show { opacity: 1; transform: translateY(0); }
+        .v-card:hover { transform: translateY(-4px); }
+        
+        .v-thumb-wrap { width: 100%; aspect-ratio: 16/9; margin-bottom: 12px; border-radius: 12px; overflow: hidden; background: var(--panel); }
+        .s-thumb-wrap { aspect-ratio: 9/16; } /* Shorts用 */
+        .v-thumb { width: 100%; height: 100%; object-fit: cover; transition: 0.4s; }
+        
+        .v-title { font-size: 0.95rem; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; color: #f1f1f1; }
+        .v-meta { font-size: 0.8rem; color: var(--text-sub); }
 
         @media (max-width: 600px) {
-            .channel-header { flex-direction: column; text-align: center; padding: 40px 0; }
-            .ch-icon { width: 100px; height: 100px; }
-            .ch-name { font-size: 1.8rem; }
+            .channel-header { flex-direction: column; text-align: center; gap: 16px; }
+            .ch-icon { width: 80px; height: 80px; }
+            .ch-name { font-size: 1.5rem; }
+            .tab-bar { gap: 16px; overflow-x: auto; scrollbar-width: none; }
         }
     </style>
 </head>
@@ -89,92 +73,112 @@
             <div id="ch-icon-skel" class="skeleton ch-icon"></div>
             <img id="ch-icon" src="" class="ch-icon" style="display:none;" onerror="this.src='https://www.youtube.com/img/desktop/ftbc/default_avatar.png'">
             <div class="ch-info">
-                <div id="ch-name-skel" class="skeleton" style="width: 280px; height: 3rem; margin-bottom: 12px;"></div>
-                <h1 id="ch-name" class="ch-name" style="display:none;"></h1>
-                <div id="ch-id-skel" class="skeleton" style="width: 180px; height: 1.2rem;"></div>
-                <p id="ch-id" style="color:var(--text-sub); margin: 8px 0; font-size: 0.95rem; display:none;"></p>
+                <div id="ch-name-skel" class="skeleton" style="width: 200px; height: 2.5rem; margin-bottom: 8px;"></div>
+                <h1 id="ch-name" class="ch-name"></h1>
+                <p id="ch-id" style="color:var(--text-sub); margin: 4px 0; font-size: 0.9rem;"></p>
             </div>
         </div>
 
-        <div id="content">
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('videos')">動画</button>
+            <button class="tab-btn" onclick="switchTab('shorts')">ショート</button>
+        </div>
+
+        <div id="videos-section">
             <div class="video-grid" id="video-grid"></div>
+        </div>
+        <div id="shorts-section" style="display:none;">
+            <div class="shorts-grid" id="shorts-grid"></div>
         </div>
     </div>
 
     <script>
         const chId = "{{ channel_id }}";
-        
-        // サムネイル読み込み失敗時のリカバー関数
+        let channelData = null;
+        let shortsData = null;
+
         function handleThumbError(img, videoId) {
-            // mqdefaultがダメならi.ytimg.comからhqdefault、または別サーバーを試す
             const fallbacks = [
                 `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
                 `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
                 `https://i1.ytimg.com/vi/${videoId}/mqdefault.jpg`
             ];
-            
-            if (!img.dataset.errorCount) img.dataset.errorCount = 0;
-            let count = parseInt(img.dataset.errorCount);
-            
+            let count = parseInt(img.dataset.errorCount || 0);
             if (count < fallbacks.length) {
                 img.src = fallbacks[count];
                 img.dataset.errorCount = count + 1;
-            } else {
-                // すべて失敗した場合はグレーのプレースホルダー
-                img.style.background = '#222';
-                img.onerror = null;
             }
         }
-        
+
+        async function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'videos') {
+                document.getElementById('videos-section').style.display = 'block';
+                document.getElementById('shorts-section').style.display = 'none';
+            } else {
+                document.getElementById('videos-section').style.display = 'none';
+                document.getElementById('shorts-section').style.display = 'block';
+                if (!shortsData) await loadShorts();
+            }
+        }
+
         async function loadChannel() {
             try {
                 const res = await fetch(`/api/channel/${chId}`);
-                if (!res.ok) throw new Error('API Error');
-                const data = await res.json();
+                channelData = await res.json();
 
-                // ヘッダー情報の反映
-                document.getElementById('ch-name').innerText = data.name;
-                document.getElementById('ch-id').innerText = data.channel_id;
-                if(data.icon) document.getElementById('ch-icon').src = data.icon;
+                document.getElementById('ch-name').innerText = channelData.name;
+                document.getElementById('ch-id').innerText = channelData.channel_id;
+                document.getElementById('ch-icon').src = channelData.icon || 'https://www.youtube.com/img/desktop/ftbc/default_avatar.png';
                 
                 document.getElementById('ch-icon').style.display = 'block';
-                document.getElementById('ch-name').style.display = 'block';
-                document.getElementById('ch-id').style.display = 'block';
                 document.getElementById('ch-icon-skel').style.display = 'none';
                 document.getElementById('ch-name-skel').style.display = 'none';
-                document.getElementById('ch-id-skel').style.display = 'none';
 
                 const grid = document.getElementById('video-grid');
-                grid.innerHTML = data.videos.map(v => `
-                    <a href="/watch?v=${v.id}" class="v-card">
+                grid.innerHTML = channelData.videos.map((v, i) => `
+                    <a href="/watch?v=${v.id}" class="v-card" style="transition-delay: ${i * 0.05}s">
                         <div class="v-thumb-wrap">
-                            <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" 
-                                 class="v-thumb" 
-                                 loading="lazy" 
-                                 onerror="handleThumbError(this, '${v.id}')">
+                            <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" class="v-thumb" loading="lazy" onerror="handleThumbError(this, '${v.id}')">
                         </div>
                         <div class="v-title">${v.title}</div>
-                        <div class="v-meta">
-                            <span>${Number(v.view_count).toLocaleString()} views</span>
-                        </div>
+                        <div class="v-meta">${v.view_count ? Number(v.view_count).toLocaleString() + ' views' : 'Private'}</div>
                     </a>
                 `).join('');
 
-                // コンテンツを表示
-                document.getElementById('content').classList.add('visible');
-                document.getElementById('page-loader').style.opacity = '0';
+                // アニメーション表示
                 setTimeout(() => {
-                    document.getElementById('page-loader').style.display = 'none';
-                }, 600);
+                    document.querySelectorAll('.video-grid .v-card').forEach(el => el.classList.add('show'));
+                }, 100);
 
-            } catch (e) { 
-                console.error(e);
-                document.getElementById('page-loader').innerHTML = `
-                    <div style="text-align:center;">
-                        <p style="color:var(--text-sub); margin-bottom:20px;">Failed to load channel</p>
-                        <button onclick="location.reload()" style="background:var(--accent); border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">Retry</button>
-                    </div>`;
-            }
+                document.getElementById('page-loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('page-loader').style.display = 'none', 600);
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadShorts() {
+            try {
+                // スピナー再表示はせず、静かに読み込む（YouTube風）
+                const res = await fetch(`/api/channel/${chId}/shorts`);
+                shortsData = await res.json();
+                
+                const grid = document.getElementById('shorts-grid');
+                grid.innerHTML = shortsData.shorts.map((s, i) => `
+                    <a href="/watch?v=${s.id}" class="v-card" style="transition-delay: ${i * 0.03}s">
+                        <div class="v-thumb-wrap s-thumb-wrap">
+                            <img src="${s.thumbnail}" class="v-thumb" loading="lazy">
+                        </div>
+                        <div class="v-title">${s.title}</div>
+                        <div class="v-meta">${s.view_count}</div>
+                    </a>
+                `).join('');
+
+                setTimeout(() => {
+                    document.querySelectorAll('.shorts-grid .v-card').forEach(el => el.classList.add('show'));
+                }, 50);
+            } catch (e) { console.error(e); }
         }
 
         loadChannel();
