@@ -119,13 +119,12 @@ async def view_channel(request: Request, channel_id: str, _=Depends(verify_auth)
 async def api_get_channel(channel_id: str):
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            # 1. チャンネルの動画リストを取得
+            # 1. チャンネルの動画リストと基本情報を取得
             backend_url = f"https://yudlp.vercel.app/channel/{channel_id}"
             res = await client.get(backend_url)
             data = res.json()
 
             # 2. アイコン取得（Invidious APIを並列で叩いて補完）
-            # handleが@で始まる場合とIDの場合両方に対応
             path = f"/channels/{channel_id}"
             inv_data = await request_invidious_parallel(path, COMMENT_API_INSTANCES)
             
@@ -133,10 +132,11 @@ async def api_get_channel(channel_id: str):
             if inv_data and "authorThumbnails" in inv_data:
                 icon_url = inv_data["authorThumbnails"][-1]["url"]
 
-            # レスポンスの構築
+            # レスポンスの構築（subscriber_countを追加）
             return {
                 "channel_id": data.get("channel_id"),
                 "name": data.get("name"),
+                "subscriber_count": data.get("subscriber_count"),  # 登録者数を追加
                 "icon": icon_url,
                 "videos": data.get("videos", [])
             }
@@ -190,7 +190,6 @@ async def api_proxy_stream_json(video_id: str):
 async def api_get_channel_shorts(channel_id: str):
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            # 指定された shorts 用のバックエンドURL
             backend_url = f"https://yudlp.vercel.app/short/{channel_id}"
             res = await client.get(backend_url)
             return res.json()
