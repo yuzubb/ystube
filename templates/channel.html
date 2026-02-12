@@ -8,71 +8,175 @@
         :root {
             --accent: #00d4ff;
             --bg: #05070a;
-            --panel: rgba(255, 255, 255, 0.05);
-            --border: rgba(255, 255, 255, 0.1);
+            --panel: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
+            --shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
         }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             margin: 0; background: var(--bg); color: var(--text-main);
             font-family: "YouTube Sans", "Roboto", sans-serif;
+            overflow-x: hidden;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        /* 進化したローディング UI */
+        .skeleton {
+            background: rgba(255,255,255,0.05); position: relative; overflow: hidden; border-radius: 12px;
+        }
+        .skeleton::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--shimmer); animation: shimmer 2s infinite linear;
+        }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg); z-index: 1000; transition: opacity 0.6s ease;
+        }
+        .spinner {
+            width: 48px; height: 48px; position: relative;
+        }
+        .spinner::before, .spinner::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border: 3px solid transparent; border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        }
+        .spinner::after { border-top-color: rgba(0, 212, 255, 0.2); animation-delay: 0.1s; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Layout */
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 20px 40px; }
         
         .channel-header {
-            display: flex; align-items: center; gap: 20px; padding: 40px 0;
-            border-bottom: 1px solid var(--border); margin-bottom: 30px;
+            display: flex; align-items: center; gap: 32px; padding: 60px 0 40px;
+            border-bottom: 1px solid var(--border); margin-bottom: 40px;
         }
-        .ch-icon { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; background: var(--panel); }
-        .ch-name { font-size: 2rem; font-weight: bold; margin: 0; }
+        .ch-icon { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .ch-name { font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
         
+        /* Grid */
         .video-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 32px 20px;
         }
-        .v-card { text-decoration: none; color: inherit; transition: transform 0.2s; }
-        .v-card:hover { transform: translateY(-5px); }
-        .v-thumb { 
-            width: 100%; aspect-ratio: 16/9; border-radius: 12px; object-fit: cover; 
-            background: var(--panel); margin-bottom: 8px;
+        .v-card { text-decoration: none; color: inherit; display: block; transform: translateY(0); transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1); }
+        .v-card:hover { transform: translateY(-6px); }
+        
+        .v-thumb-wrap { width: 100%; aspect-ratio: 16/9; margin-bottom: 14px; position: relative; border-radius: 12px; overflow: hidden; background: var(--panel); }
+        .v-thumb { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+        
+        .v-title { font-size: 1rem; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; color: #f1f1f1; }
+        .v-meta { font-size: 0.85rem; color: var(--text-sub); display: flex; gap: 8px; }
+
+        /* Content Transition */
+        #content { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease, transform 0.8s ease; }
+        #content.visible { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 600px) {
+            .channel-header { flex-direction: column; text-align: center; padding: 40px 0; }
+            .ch-icon { width: 100px; height: 100px; }
+            .ch-name { font-size: 1.8rem; }
         }
-        .v-title { font-size: 0.95rem; font-weight: bold; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .v-meta { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
     </style>
 </head>
 <body>
+    <div id="page-loader" class="loading-overlay"><div class="spinner"></div></div>
+
     <div class="container">
         <div class="channel-header">
-            <img id="ch-icon" src="" class="ch-icon">
+            <div id="ch-icon-skel" class="skeleton ch-icon"></div>
+            <img id="ch-icon" src="" class="ch-icon" style="display:none;" onerror="this.src='https://www.youtube.com/img/desktop/ftbc/default_avatar.png'">
             <div class="ch-info">
-                <h1 id="ch-name" class="ch-name">Loading...</h1>
-                <p id="ch-id" style="color:var(--text-sub); margin: 5px 0;"></p>
+                <div id="ch-name-skel" class="skeleton" style="width: 280px; height: 3rem; margin-bottom: 12px;"></div>
+                <h1 id="ch-name" class="ch-name" style="display:none;"></h1>
+                <div id="ch-id-skel" class="skeleton" style="width: 180px; height: 1.2rem;"></div>
+                <p id="ch-id" style="color:var(--text-sub); margin: 8px 0; font-size: 0.95rem; display:none;"></p>
             </div>
         </div>
 
-        <div class="video-grid" id="video-grid"></div>
+        <div id="content">
+            <div class="video-grid" id="video-grid"></div>
+        </div>
     </div>
 
     <script>
         const chId = "{{ channel_id }}";
+        
+        // サムネイル読み込み失敗時のリカバー関数
+        function handleThumbError(img, videoId) {
+            // mqdefaultがダメならi.ytimg.comからhqdefault、または別サーバーを試す
+            const fallbacks = [
+                `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+                `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                `https://i1.ytimg.com/vi/${videoId}/mqdefault.jpg`
+            ];
+            
+            if (!img.dataset.errorCount) img.dataset.errorCount = 0;
+            let count = parseInt(img.dataset.errorCount);
+            
+            if (count < fallbacks.length) {
+                img.src = fallbacks[count];
+                img.dataset.errorCount = count + 1;
+            } else {
+                // すべて失敗した場合はグレーのプレースホルダー
+                img.style.background = '#222';
+                img.onerror = null;
+            }
+        }
+        
         async function loadChannel() {
             try {
                 const res = await fetch(`/api/channel/${chId}`);
+                if (!res.ok) throw new Error('API Error');
                 const data = await res.json();
 
+                // ヘッダー情報の反映
                 document.getElementById('ch-name').innerText = data.name;
                 document.getElementById('ch-id').innerText = data.channel_id;
-                document.getElementById('ch-icon').src = data.icon || 'https://www.youtube.com/img/desktop/ftbc/default_avatar.png';
+                if(data.icon) document.getElementById('ch-icon').src = data.icon;
+                
+                document.getElementById('ch-icon').style.display = 'block';
+                document.getElementById('ch-name').style.display = 'block';
+                document.getElementById('ch-id').style.display = 'block';
+                document.getElementById('ch-icon-skel').style.display = 'none';
+                document.getElementById('ch-name-skel').style.display = 'none';
+                document.getElementById('ch-id-skel').style.display = 'none';
 
                 const grid = document.getElementById('video-grid');
                 grid.innerHTML = data.videos.map(v => `
                     <a href="/watch?v=${v.id}" class="v-card">
-                        <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" class="v-thumb">
+                        <div class="v-thumb-wrap">
+                            <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" 
+                                 class="v-thumb" 
+                                 loading="lazy" 
+                                 onerror="handleThumbError(this, '${v.id}')">
+                        </div>
                         <div class="v-title">${v.title}</div>
-                        <div class="v-meta">${v.view_count.toLocaleString()} views</div>
+                        <div class="v-meta">
+                            <span>${Number(v.view_count).toLocaleString()} views</span>
+                        </div>
                     </a>
                 `).join('');
-            } catch (e) { console.error(e); }
+
+                // コンテンツを表示
+                document.getElementById('content').classList.add('visible');
+                document.getElementById('page-loader').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('page-loader').style.display = 'none';
+                }, 600);
+
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('page-loader').innerHTML = `
+                    <div style="text-align:center;">
+                        <p style="color:var(--text-sub); margin-bottom:20px;">Failed to load channel</p>
+                        <button onclick="location.reload()" style="background:var(--accent); border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">Retry</button>
+                    </div>`;
+            }
         }
+
         loadChannel();
     </script>
 </body>
