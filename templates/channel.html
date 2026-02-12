@@ -43,7 +43,6 @@
 
         /* グリッドレイアウト */
         .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 16px; }
-        /* Shorts用グリッド（縦長） */
         .shorts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px 8px; }
 
         .v-card { text-decoration: none; color: inherit; display: block; transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1); opacity: 0; transform: translateY(15px); }
@@ -51,7 +50,7 @@
         .v-card:hover { transform: translateY(-4px); }
         
         .v-thumb-wrap { width: 100%; aspect-ratio: 16/9; margin-bottom: 12px; border-radius: 12px; overflow: hidden; background: var(--panel); }
-        .s-thumb-wrap { aspect-ratio: 9/16; } /* Shorts用 */
+        .s-thumb-wrap { aspect-ratio: 9/16; } 
         .v-thumb { width: 100%; height: 100%; object-fit: cover; transition: 0.4s; }
         
         .v-title { font-size: 0.95rem; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; color: #f1f1f1; }
@@ -75,7 +74,7 @@
             <div class="ch-info">
                 <div id="ch-name-skel" class="skeleton" style="width: 200px; height: 2.5rem; margin-bottom: 8px;"></div>
                 <h1 id="ch-name" class="ch-name"></h1>
-                <p id="ch-id" style="color:var(--text-sub); margin: 4px 0; font-size: 0.9rem;"></p>
+                <p id="ch-sub-count" style="color:var(--text-sub); margin: 4px 0; font-size: 0.9rem;"></p>
             </div>
         </div>
 
@@ -96,6 +95,15 @@
         const chId = "{{ channel_id }}";
         let channelData = null;
         let shortsData = null;
+
+        // 数値を「万」「億」に変換する関数
+        function formatCount(num) {
+            if (!num || isNaN(num)) return "";
+            const n = Number(num);
+            if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '億';
+            if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
+            return n.toLocaleString();
+        }
 
         function handleThumbError(img, videoId) {
             const fallbacks = [
@@ -130,7 +138,12 @@
                 channelData = await res.json();
 
                 document.getElementById('ch-name').innerText = channelData.name;
-                document.getElementById('ch-id').innerText = channelData.channel_id;
+                
+                // 登録者数のフォーマット表示
+                const subCountText = channelData.subscriber_count ? 
+                                     `チャンネル登録者数 ${formatCount(channelData.subscriber_count)}人` : "";
+                document.getElementById('ch-sub-count').innerText = subCountText;
+
                 document.getElementById('ch-icon').src = channelData.icon || 'https://www.youtube.com/img/desktop/ftbc/default_avatar.png';
                 
                 document.getElementById('ch-icon').style.display = 'block';
@@ -144,11 +157,10 @@
                             <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" class="v-thumb" loading="lazy" onerror="handleThumbError(this, '${v.id}')">
                         </div>
                         <div class="v-title">${v.title}</div>
-                        <div class="v-meta">${v.view_count ? Number(v.view_count).toLocaleString() + ' views' : 'Private'}</div>
+                        <div class="v-meta">${v.view_count ? formatCount(v.view_count) + ' 回視聴' : '非公開'}</div>
                     </a>
                 `).join('');
 
-                // アニメーション表示
                 setTimeout(() => {
                     document.querySelectorAll('.video-grid .v-card').forEach(el => el.classList.add('show'));
                 }, 100);
@@ -160,7 +172,6 @@
 
         async function loadShorts() {
             try {
-                // スピナー再表示はせず、静かに読み込む（YouTube風）
                 const res = await fetch(`/api/channel/${chId}/shorts`);
                 shortsData = await res.json();
                 
@@ -171,7 +182,7 @@
                             <img src="${s.thumbnail}" class="v-thumb" loading="lazy">
                         </div>
                         <div class="v-title">${s.title}</div>
-                        <div class="v-meta">${s.view_count}</div>
+                        <div class="v-meta">${formatCount(s.view_count)} 回視聴</div>
                     </a>
                 `).join('');
 
