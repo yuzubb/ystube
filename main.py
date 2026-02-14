@@ -195,3 +195,28 @@ async def api_get_channel_shorts(channel_id: str):
             return res.json()
         except Exception as e:
             return JSONResponse(status_code=502, content={"error": "shorts api failed", "details": str(e)})
+
+@app.get("/api/subtitles/{video_id}")
+async def api_get_subtitle_list(video_id: str):
+    """利用可能な字幕言語の一覧を取得"""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            # バックエンドから言語リストを取得
+            backend_url = f"https://yudlp.vercel.app/subtitles/{video_id}"
+            res = await client.get(backend_url)
+            return res.json()
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "subtitle list failed", "details": str(e)})
+
+@app.get("/api/subtitles/{video_id}/content")
+async def api_get_subtitle_content(video_id: str, lang: str = "ja"):
+    """指定された言語の字幕本文(JSON)を取得"""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            # バックエンドからパース済みの字幕データを取得
+            backend_url = f"https://yudlp.vercel.app/subtitles/{video_id}/content?lang={lang}"
+            res = await client.get(backend_url)
+            return res.json()
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "subtitle content failed", "details": str(e)})
+            
