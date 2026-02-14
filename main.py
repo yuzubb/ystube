@@ -182,9 +182,16 @@ async def api_proxy_stream_json(video_id: str):
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             res = await client.get(f"{STREAM_API_BASE}/{video_id}")
-            return res.json()
-        except:
-            return JSONResponse(status_code=502, content={"error": "stream failed"})
+            res.raise_for_status() # ステータスコードのチェック
+            data = res.json()
+            
+            # 新しい構造に合わせて必要なデータがあるか確認
+            if "formats" not in data:
+                return JSONResponse(status_code=502, content={"error": "invalid stream data: formats missing"})
+                
+            return data # または特定のフォーマットのみフィルタリングして返す
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "stream failed", "details": str(e)})
 
 @app.get("/api/channel/{channel_id}/shorts")
 async def api_get_channel_shorts(channel_id: str):
