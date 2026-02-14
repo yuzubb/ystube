@@ -23,40 +23,39 @@
         .logo { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; text-decoration: none; color: var(--accent); flex-shrink: 0; }
         .search-container { flex: 1; position: relative; max-width: 500px; margin: 0 auto; }
         .search-input { width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 8px 15px; color: white; outline: none; font-size: 16px; }
-        #suggestions { position: absolute; top: 105%; left: 0; right: 0; background: #161b22; border: 1px solid var(--border); border-radius: 12px; list-style: none; padding: 8px 0; margin: 0; display: none; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #suggestions { position: absolute; top: 105%; left: 0; right: 0; background: #161b22; border: 1px solid var(--border); border-radius: 12px; list-style: none; padding: 8px 0; margin: 0; display: none; z-index: 1000; }
         #suggestions li { padding: 12px 20px; cursor: pointer; }
+
         .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; }
         @media (min-width: 1001px) { .container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 20px; } }
-        
-        /* Video Viewport & Captions */
+
+        /* Video Area */
         #video-viewport { width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; position: relative; }
         @media (min-width: 1001px) { #video-viewport { border-radius: 12px; } }
         video { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.5s; }
         video.loaded { opacity: 1; }
 
-        /* 字幕表示用オーバーレイ */
+        /* Captions UI */
         #caption-overlay {
             position: absolute; bottom: 15%; width: 100%; text-align: center; 
-            pointer-events: none; z-index: 15; padding: 0 5%;
+            pointer-events: none; z-index: 15; padding: 0 10px;
         }
         #caption-text {
-            background: rgba(0, 0, 0, 0.75); color: #fff; padding: 4px 10px;
-            border-radius: 4px; font-size: clamp(1rem, 4vw, 1.4rem); line-height: 1.4;
+            background: rgba(0, 0, 0, 0.75); color: #fff; padding: 4px 12px;
+            border-radius: 4px; font-size: clamp(1rem, 4vw, 1.4rem);
             display: none; white-space: pre-wrap;
         }
-
-        /* CCボタン & メニュー */
         #cc-container { position: absolute; bottom: 45px; right: 10px; z-index: 20; }
         #cc-menu { 
             display: none; position: absolute; bottom: 100%; right: 0; 
             background: #161b22; border: 1px solid var(--border); border-radius: 8px; 
             list-style: none; padding: 8px 0; margin-bottom: 8px; min-width: 140px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5); max-height: 250px; overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); max-height: 200px; overflow-y: auto;
         }
-        .cc-item { padding: 10px 15px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .cc-item { padding: 10px 15px; font-size: 13px; cursor: pointer; color: white; }
         .cc-item:hover { background: var(--panel); color: var(--accent); }
-        .cc-item.active { color: var(--accent); font-weight: bold; }
 
+        /* Utils */
         .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10; }
         .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -64,36 +63,35 @@
         .main-info { padding: 12px; }
         .v-title { font-size: 1.1rem; font-weight: bold; margin: 10px 0; }
         .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
-        .q-bar::-webkit-scrollbar { display: none; }
-        .q-btn { background: var(--panel); border: 1px solid var(--border); color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; flex-shrink: 0; }
+        .q-btn { background: var(--panel); border: 1px solid var(--border); color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; flex-shrink: 0; transition: all 0.2s; }
         .q-btn.active { background: white; color: black; font-weight: bold; }
+        
         .expand-box { background: var(--panel); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
         .expand-head { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 0.9rem; font-weight: bold; }
         .expand-content { display: none; padding: 0 16px 16px; font-size: 0.85rem; border-top: 1px solid var(--border); }
         .expand-content.open { display: block; }
-        .t-link { color: var(--accent); text-decoration: none; cursor: pointer; font-weight: bold; }
         .author-row { display: flex; align-items: center; gap: 12px; margin: 10px 0 20px; cursor: pointer; }
         .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
         .related-item { display: flex; gap: 12px; text-decoration: none; color: inherit; margin-bottom: 16px; padding: 0 12px; }
-        @media (min-width: 1001px) { .related-item { padding: 0; } }
         .r-thumb-wrap { position: relative; width: 40%; max-width: 160px; aspect-ratio: 16/9; flex-shrink: 0; }
         .r-thumb { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; background: var(--panel); }
         .r-info { flex: 1; min-width: 0; }
-        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
+        .r-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .r-meta { font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; }
-        .pl-badge { position: absolute; top: 0; right: 0; bottom: 0; width: 35%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; border-radius: 0 10px 10px 0; font-size: 14px; }
     </style>
 </head>
 <body>
+
 <header>
     <a href="/" class="logo">YS</a>
     <div class="search-container">
-        <form action="/search" method="GET" id="search-form">
+        <form action="/search" method="GET">
             <input type="text" name="q" id="search-input" class="search-input" placeholder="検索..." autocomplete="off">
         </form>
         <ul id="suggestions"></ul>
     </div>
 </header>
+
 <div class="container">
     <div class="player-wrapper">
         <div id="video-viewport">
@@ -103,10 +101,10 @@
             <div id="caption-overlay"><span id="caption-text"></span></div>
             
             <div id="cc-container">
-                <button id="cc-btn" class="q-btn" onclick="toggleCCMenu(event)">CC</button>
-                <ul id="cc-menu">
-                    <li class="cc-item active" onclick="loadCaptions('off', this)">字幕オフ</li>
-                </ul>
+                <button id="cc-btn" class="q-btn" 
+                        onclick="toggleCCStatus()" 
+                        oncontextmenu="showCCMenu(event)">CC</button>
+                <ul id="cc-menu"></ul>
             </div>
         </div>
 
@@ -136,45 +134,64 @@
 <script>
     const vId = "{{ video_id }}";
     const video = document.getElementById('main-video');
-    const input = document.getElementById('search-input');
-    const suggList = document.getElementById('suggestions');
     const captionText = document.getElementById('caption-text');
+    const ccBtn = document.getElementById('cc-btn');
+    const ccMenu = document.getElementById('cc-menu');
+    
     let currentCaptions = [];
+    let isCCEnabled = false; // 初期オフ
+    let selectedLang = null;
 
     function toggleExpand(el) { el.nextElementSibling.classList.toggle('open'); }
-    function toggleCCMenu(e) { 
-        e.stopPropagation();
-        const m = document.getElementById('cc-menu');
-        m.style.display = m.style.display === 'block' ? 'none' : 'block';
-    }
-    document.addEventListener('click', () => document.getElementById('cc-menu').style.display = 'none');
 
-    // 字幕の読み込みと切り替え
-    async function loadCaptions(lang, el) {
-        document.querySelectorAll('.cc-item').forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
-        
-        if (lang === 'off') {
-            currentCaptions = [];
-            captionText.style.display = 'none';
-            document.getElementById('cc-btn').style.borderColor = 'var(--border)';
+    // タイムスタンプを秒に変換
+    function parseTime(t) {
+        if (typeof t === 'number') return t;
+        const p = t.split(':').map(Number);
+        return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p[0]*60 + p[1];
+    }
+
+    // CCボタンタップ（ON/OFF切り替え）
+    function toggleCCStatus() {
+        if (!selectedLang) {
+            alert("長押しで言語を選択してください");
             return;
         }
-
-        try {
-            const res = await fetch(`/api/subtitles/${vId}/content?lang=${lang}`);
-            currentCaptions = await res.json();
-            document.getElementById('cc-btn').style.borderColor = 'var(--accent)';
-        } catch (e) {
-            console.error("Caption error", e);
-        }
+        isCCEnabled = !isCCEnabled;
+        ccBtn.classList.toggle('active', isCCEnabled);
+        if (!isCCEnabled) captionText.style.display = 'none';
     }
 
-    // ビデオ再生中の字幕同期
+    // 長押しメニュー
+    function showCCMenu(e) {
+        e.preventDefault();
+        ccMenu.style.display = 'block';
+    }
+
+    // 字幕データの取得
+    async function loadCaptions(lang) {
+        try {
+            const res = await fetch(`/api/subtitles/${vId}/content?lang=${lang}`);
+            const data = await res.json();
+            // content.jsonの形式(segments)に対応
+            const segments = data.segments || data;
+            currentCaptions = segments.map(s => ({
+                start: parseTime(s.start),
+                end: parseTime(s.end),
+                text: s.text
+            }));
+            selectedLang = lang;
+            isCCEnabled = true;
+            ccBtn.classList.add('active');
+            ccMenu.style.display = 'none';
+        } catch (e) { console.error("Captions failed", e); }
+    }
+
+    // 時間同期
     video.ontimeupdate = () => {
-        if (!currentCaptions.length) return;
+        if (!isCCEnabled || !currentCaptions.length) return;
         const now = video.currentTime;
-        const sub = currentCaptions.find(s => now >= s.start && now <= (s.start + s.duration));
+        const sub = currentCaptions.find(s => now >= s.start && now <= s.end);
         if (sub) {
             captionText.innerText = sub.text;
             captionText.style.display = 'inline-block';
@@ -183,43 +200,9 @@
         }
     };
 
-    window.skipTo = (seconds) => {
-        video.currentTime = seconds; video.play();
-        const url = new URL(window.location);
-        url.searchParams.set('t', seconds);
-        window.history.pushState({}, '', url);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    function formatText(text) {
-        if(!text) return "";
-        return text.replace(/(\d{1,2}:)?(\d{1,2}):(\d{2})/g, (match) => {
-            const parts = match.split(':').map(Number);
-            let s = (parts.length === 3) ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
-            return `<span class="t-link" onclick="skipTo(${s})">${match}</span>`;
-        });
-    }
-
-    window.callback = (data) => {
-        const items = data[1] || [];
-        if (items.length > 0) {
-            suggList.innerHTML = items.map(t => `<li onclick="location.href='/search?q='+encodeURIComponent('${t}')">${t}</li>`).join('');
-            suggList.style.display = 'block';
-        } else { suggList.style.display = 'none'; }
-    };
-
-    input.addEventListener('input', () => {
-        const q = input.value.trim();
-        if (!q) { suggList.style.display = 'none'; return; }
-        const s = document.createElement('script');
-        s.src = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}&callback=callback`;
-        document.body.appendChild(s);
-        s.onload = () => s.remove();
-    });
-
     async function init() {
         try {
-            // 動画詳細
+            // 基本情報
             const res = await fetch(`/api/details/${vId}`);
             const data = await res.json();
             document.getElementById('v-title').innerText = data.title;
@@ -227,88 +210,58 @@
             document.getElementById('c-subs').innerText = data.author.subscribers;
             document.getElementById('c-icon').src = data.author.thumbnail;
             document.getElementById('c-icon').style.display = 'block';
-            document.getElementById('v-desc').innerHTML = formatText(data.description.text);
-            document.getElementById('author-click').onclick = () => location.href = `/channel/${data.author.id}`;
-            
-            // 字幕言語リストの取得
+            document.getElementById('v-desc').innerText = data.description.text;
+
+            // 字幕リスト取得
             const subRes = await fetch(`/api/subtitles/${vId}`);
             const subList = await subRes.json();
-            const ccMenu = document.getElementById('cc-menu');
-            if (subList && subList.length > 0) {
-                subList.forEach(s => {
-                    const li = document.createElement('li');
-                    li.className = 'cc-item';
-                    li.innerText = s.name;
-                    li.onclick = (e) => { e.stopPropagation(); loadCaptions(s.language_code, li); };
-                    ccMenu.appendChild(li);
-                    // 初期表示を日本語にする
-                    if(s.language_code === 'ja') loadCaptions('ja', li);
-                });
-            }
+            ccMenu.innerHTML = '';
+            subList.forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'cc-item';
+                li.innerText = s.name;
+                li.onclick = () => loadCaptions(s.language_code);
+                ccMenu.appendChild(li);
+            });
+
+            // ストリーム
+            const sRes = await fetch(`/api/stream/${vId}`);
+            const sData = await sRes.json();
+            const qBar = document.getElementById('q-bar');
+            const formats = sData.formats.filter(f => f.resolution);
+            formats.forEach(f => {
+                const b = document.createElement('button');
+                b.className = 'q-btn' + (f.itag == 18 ? ' active' : '');
+                b.innerText = f.resolution;
+                b.onclick = () => {
+                    const t = video.currentTime;
+                    document.querySelectorAll('.q-btn').forEach(btn => btn.classList.remove('active'));
+                    b.classList.add('active');
+                    video.src = f.url; video.currentTime = t; video.play();
+                };
+                qBar.appendChild(b);
+            });
+            video.src = (formats.find(f => f.itag == 18) || formats[0]).url;
+            video.onloadeddata = () => {
+                video.classList.add('loaded');
+                document.getElementById('loader').style.display = 'none';
+            };
 
             // 関連動画
             if (data["Related-videos"]) {
-                document.getElementById('related-box').innerHTML = data["Related-videos"].relatedVideos.map(rv => {
-                    const isPL = rv.type === "playlist" || !rv.channelName || String(rv.channelName) === "undefined";
-                    const url = isPL ? `/watch?v=${rv.videoId}&list=${rv.playlistId || 'RD'+rv.videoId}` : `/watch?v=${rv.videoId}`;
-                    return `
-                    <a href="${url}" class="related-item">
-                        <div class="r-thumb-wrap">
-                            <img src="${rv.thumbnail}" class="r-thumb" loading="lazy">
-                            ${isPL ? '<div class="pl-badge">☰</div>' : ''}
-                        </div>
+                document.getElementById('related-box').innerHTML = data["Related-videos"].relatedVideos.map(rv => `
+                    <a href="/watch?v=${rv.videoId}" class="related-item">
+                        <div class="r-thumb-wrap"><img src="${rv.thumbnail}" class="r-thumb"></div>
                         <div class="r-info">
                             <div class="r-title">${rv.title}</div>
-                            <div class="r-meta" style="${isPL ? 'color:var(--accent); font-weight:bold;' : ''}">
-                                ${isPL ? 'プレイリスト' : rv.channelName}
-                            </div>
+                            <div class="r-meta">${rv.channelName}</div>
                         </div>
-                    </a>`;
-                }).join('');
+                    </a>`).join('');
             }
-
-            // ストリーム取得
-            const sRes = await fetch(`/api/stream/${vId}`);
-            const sData = await sRes.json();
-            if (sData.formats) {
-                const qBar = document.getElementById('q-bar');
-                const vFmts = sData.formats.filter(f => f.resolution !== "audio only" && (f.resolution || f.qualityLabel));
-                vFmts.forEach(f => {
-                    const resLabel = f.resolution || f.qualityLabel;
-                    const b = document.createElement('button');
-                    b.className = 'q-btn' + (f.itag === "18" || f.itag === 18 ? " active" : "");
-                    b.innerText = resLabel;
-                    b.onclick = () => {
-                        const t = video.currentTime;
-                        document.querySelectorAll('.q-btn').forEach(btn => btn.classList.remove('active'));
-                        b.classList.add('active');
-                        video.src = f.url; video.currentTime = t; video.play();
-                    };
-                    qBar.appendChild(b);
-                });
-                const def = vFmts.find(f => f.itag === "18" || f.itag === 18) || vFmts[0];
-                video.src = def.url;
-                const startTime = new URLSearchParams(window.location.search).get('t');
-                video.onloadeddata = () => {
-                    if (startTime) video.currentTime = parseInt(startTime);
-                    video.classList.add('loaded');
-                    document.getElementById('loader').style.display = 'none';
-                };
-            }
-
-            // コメント
-            const cRes = await fetch(`/api/comments/${vId}`);
-            const comments = await cRes.json();
-            document.getElementById('comments-list').innerHTML = comments.map(c => `
-                <div style="display:flex; gap:12px; margin-bottom:16px;">
-                    <img src="${c.authoricon}" style="width:32px; height:32px; border-radius:50%;">
-                    <div style="flex:1;">
-                        <div style="font-weight:bold; font-size:0.8rem;">${c.author}</div>
-                        <div style="margin-top:2px;">${formatText(c.body)}</div>
-                    </div>
-                </div>`).join('');
-        } catch (e) {}
+        } catch (e) { console.error(e); }
     }
+
+    document.addEventListener('click', (e) => { if (e.target.id !== 'cc-btn') ccMenu.style.display = 'none'; });
     init();
 </script>
 </body>
