@@ -27,14 +27,40 @@
         #suggestions li { padding: 12px 20px; cursor: pointer; }
         .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; }
         @media (min-width: 1001px) { .container { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 20px; } }
+        
+        /* Video Viewport & Captions */
         #video-viewport { width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; position: relative; }
         @media (min-width: 1001px) { #video-viewport { border-radius: 12px; } }
         video { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.5s; }
         video.loaded { opacity: 1; }
-        video::cue { background: rgba(0, 0, 0, 0.7); color: white; font-size: 18px; }
+
+        /* 字幕表示用オーバーレイ */
+        #caption-overlay {
+            position: absolute; bottom: 15%; width: 100%; text-align: center; 
+            pointer-events: none; z-index: 15; padding: 0 5%;
+        }
+        #caption-text {
+            background: rgba(0, 0, 0, 0.75); color: #fff; padding: 4px 10px;
+            border-radius: 4px; font-size: clamp(1rem, 4vw, 1.4rem); line-height: 1.4;
+            display: none; white-space: pre-wrap;
+        }
+
+        /* CCボタン & メニュー */
+        #cc-container { position: absolute; bottom: 45px; right: 10px; z-index: 20; }
+        #cc-menu { 
+            display: none; position: absolute; bottom: 100%; right: 0; 
+            background: #161b22; border: 1px solid var(--border); border-radius: 8px; 
+            list-style: none; padding: 8px 0; margin-bottom: 8px; min-width: 140px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); max-height: 250px; overflow-y: auto;
+        }
+        .cc-item { padding: 10px 15px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .cc-item:hover { background: var(--panel); color: var(--accent); }
+        .cc-item.active { color: var(--accent); font-weight: bold; }
+
         .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10; }
         .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         .main-info { padding: 12px; }
         .v-title { font-size: 1.1rem; font-weight: bold; margin: 10px 0; }
         .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
@@ -73,7 +99,17 @@
         <div id="video-viewport">
             <div id="loader" class="loading-overlay"><div class="spinner"></div></div>
             <video id="main-video" controls autoplay playsinline></video>
+            
+            <div id="caption-overlay"><span id="caption-text"></span></div>
+            
+            <div id="cc-container">
+                <button id="cc-btn" class="q-btn" onclick="toggleCCMenu(event)">CC</button>
+                <ul id="cc-menu">
+                    <li class="cc-item active" onclick="loadCaptions('off', this)">字幕オフ</li>
+                </ul>
+            </div>
         </div>
+
         <main class="main-info">
             <h1 class="v-title" id="v-title">Loading...</h1>
             <div id="q-bar" class="q-bar"></div>
@@ -96,30 +132,74 @@
     </div>
     <aside id="related-box"></aside>
 </div>
+
 <script>
     const vId = "{{ video_id }}";
     const video = document.getElementById('main-video');
     const input = document.getElementById('search-input');
     const suggList = document.getElementById('suggestions');
+    const captionText = document.getElementById('caption-text');
+    let currentCaptions = [];
+
     function toggleExpand(el) { el.nextElementSibling.classList.toggle('open'); }
+    function toggleCCMenu(e) { 
+        e.stopPropagation();
+        const m = document.getElementById('cc-menu');
+        m.style.display = m.style.display === 'block' ? 'none' : 'block';
+    }
+    document.addEventListener('click', () => document.getElementById('cc-menu').style.display = 'none');
+
+    // 字幕の読み込みと切り替え
+    async function loadCaptions(lang, el) {
+        document.querySelectorAll('.cc-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        
+        if (lang === 'off') {
+            currentCaptions = [];
+            captionText.style.display = 'none';
+            document.getElementById('cc-btn').style.borderColor = 'var(--border)';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/subtitles/${vId}/content?lang=${lang}`);
+            currentCaptions = await res.json();
+            document.getElementById('cc-btn').style.borderColor = 'var(--accent)';
+        } catch (e) {
+            console.error("Caption error", e);
+        }
+    }
+
+    // ビデオ再生中の字幕同期
+    video.ontimeupdate = () => {
+        if (!currentCaptions.length) return;
+        const now = video.currentTime;
+        const sub = currentCaptions.find(s => now >= s.start && now <= (s.start + s.duration));
+        if (sub) {
+            captionText.innerText = sub.text;
+            captionText.style.display = 'inline-block';
+        } else {
+            captionText.style.display = 'none';
+        }
+    };
+
     window.skipTo = (seconds) => {
-        video.currentTime = seconds;
-        video.play();
+        video.currentTime = seconds; video.play();
         const url = new URL(window.location);
         url.searchParams.set('t', seconds);
         window.history.pushState({}, '', url);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
+
     function formatText(text) {
         if(!text) return "";
         return text.replace(/(\d{1,2}:)?(\d{1,2}):(\d{2})/g, (match) => {
             const parts = match.split(':').map(Number);
-            let s = 0;
-            if (parts.length === 3) s = parts[0] * 3600 + parts[1] * 60 + parts[2];
-            else s = parts[0] * 60 + parts[1];
+            let s = (parts.length === 3) ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
             return `<span class="t-link" onclick="skipTo(${s})">${match}</span>`;
         });
     }
+
     window.callback = (data) => {
         const items = data[1] || [];
         if (items.length > 0) {
@@ -127,6 +207,7 @@
             suggList.style.display = 'block';
         } else { suggList.style.display = 'none'; }
     };
+
     input.addEventListener('input', () => {
         const q = input.value.trim();
         if (!q) { suggList.style.display = 'none'; return; }
@@ -135,8 +216,10 @@
         document.body.appendChild(s);
         s.onload = () => s.remove();
     });
+
     async function init() {
         try {
+            // 動画詳細
             const res = await fetch(`/api/details/${vId}`);
             const data = await res.json();
             document.getElementById('v-title').innerText = data.title;
@@ -147,18 +230,23 @@
             document.getElementById('v-desc').innerHTML = formatText(data.description.text);
             document.getElementById('author-click').onclick = () => location.href = `/channel/${data.author.id}`;
             
-            if (data.captions) {
-                data.captions.forEach(cap => {
-                    const track = document.createElement('track');
-                    track.kind = 'captions';
-                    track.label = cap.name;
-                    track.srclang = cap.language_code;
-                    track.src = cap.url; 
-                    if(cap.language_code === 'ja') track.default = true;
-                    video.appendChild(track);
+            // 字幕言語リストの取得
+            const subRes = await fetch(`/api/subtitles/${vId}`);
+            const subList = await subRes.json();
+            const ccMenu = document.getElementById('cc-menu');
+            if (subList && subList.length > 0) {
+                subList.forEach(s => {
+                    const li = document.createElement('li');
+                    li.className = 'cc-item';
+                    li.innerText = s.name;
+                    li.onclick = (e) => { e.stopPropagation(); loadCaptions(s.language_code, li); };
+                    ccMenu.appendChild(li);
+                    // 初期表示を日本語にする
+                    if(s.language_code === 'ja') loadCaptions('ja', li);
                 });
             }
 
+            // 関連動画
             if (data["Related-videos"]) {
                 document.getElementById('related-box').innerHTML = data["Related-videos"].relatedVideos.map(rv => {
                     const isPL = rv.type === "playlist" || !rv.channelName || String(rv.channelName) === "undefined";
@@ -178,6 +266,8 @@
                     </a>`;
                 }).join('');
             }
+
+            // ストリーム取得
             const sRes = await fetch(`/api/stream/${vId}`);
             const sData = await sRes.json();
             if (sData.formats) {
@@ -205,6 +295,8 @@
                     document.getElementById('loader').style.display = 'none';
                 };
             }
+
+            // コメント
             const cRes = await fetch(`/api/comments/${vId}`);
             const comments = await cRes.json();
             document.getElementById('comments-list').innerHTML = comments.map(c => `
