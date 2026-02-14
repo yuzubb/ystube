@@ -17,14 +17,26 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: var(--bg); color: var(--text-main); font-family: "YouTube Sans", "Roboto", sans-serif; overflow-x: hidden; }
 
-        .skeleton { background: var(--panel); position: relative; overflow: hidden; border-radius: 6px; }
-        .skeleton::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--shimmer); animation: shimmer 1.5s infinite; }
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        /* --- Header Styles --- */
+        header { 
+            position: sticky; top: 0; z-index: 100; 
+            background: rgba(5, 7, 10, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            padding: 10px 15px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--border); 
+        }
+        .logo { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; text-decoration: none; color: var(--accent); flex-shrink: 0; }
+        .search-container { flex: 1; position: relative; max-width: 500px; margin: 0 auto; }
+        .search-input { 
+            width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; 
+            padding: 8px 15px; color: white; outline: none; font-size: 16px; transition: 0.3s;
+        }
+        #suggestions { 
+            position: absolute; top: 105%; left: 0; right: 0; background: #161b22; 
+            border: 1px solid var(--border); border-radius: 12px; list-style: none; padding: 8px 0; margin: 0; 
+            display: none; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        #suggestions li { padding: 12px 20px; cursor: pointer; }
 
-        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10; }
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
+        /* --- Layout --- */
         .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; }
         @media (min-width: 1001px) { .container { display: grid; grid-template-columns: 1fr 400px; gap: 24px; padding: 20px; } }
         
@@ -33,66 +45,120 @@
         video { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.5s; }
         video.loaded { opacity: 1; }
 
+        /* --- Components --- */
         .main-info { padding: 12px; }
-        .v-title { font-size: 1.2rem; font-weight: bold; margin: 10px 0; line-height: 1.4; }
+        .v-title { font-size: 1.2rem; font-weight: bold; margin: 10px 0; }
+        .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
+        .q-btn { background: var(--panel); border: 1px solid var(--border); color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+        .q-btn.active { background: white; color: black; font-weight: bold; }
+        
+        .timestamp-link { color: var(--accent); text-decoration: none; cursor: pointer; font-weight: bold; }
+        .timestamp-link:hover { text-decoration: underline; }
 
-        /* 画質ボタンのスタイルを修正 */
-        .q-bar { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
-        .q-bar::-webkit-scrollbar { display: none; }
-        .q-btn { 
-            background: var(--panel); border: 1px solid var(--border); color: white; 
-            padding: 8px 16px; border-radius: 20px; cursor: pointer; 
-            font-size: 0.85rem; white-space: nowrap; transition: 0.2s;
-        }
-        .q-btn.active { background: white; color: black; font-weight: bold; border-color: white; }
-
-        .author-row { display: flex; align-items: center; gap: 12px; margin: 15px 0; cursor: pointer; }
-        .c-icon { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-
-        .playlist-aside { background: var(--panel); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
-        @media (min-width: 1001px) { .playlist-aside { position: sticky; top: 20px; height: calc(100vh - 40px); } }
-        .playlist-header { padding: 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.03); }
+        /* --- Playlist Aside --- */
+        .playlist-aside { background: var(--panel); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; margin-top: 10px; }
+        @media (min-width: 1001px) { .playlist-aside { position: sticky; top: 80px; height: calc(100vh - 100px); margin-top: 0; } }
         .playlist-list { overflow-y: auto; flex: 1; }
-        .playlist-item { display: flex; gap: 10px; padding: 10px 12px; text-decoration: none; color: inherit; align-items: center; }
-        .playlist-item.active { background: rgba(0, 212, 255, 0.12); border-left: 4px solid var(--accent); }
-        .pl-thumb { width: 120px; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: var(--panel); }
-        .pl-title { font-size: 0.85rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
+        .playlist-item { display: flex; gap: 10px; padding: 10px; text-decoration: none; color: inherit; }
+        .playlist-item.active { background: rgba(0, 212, 255, 0.1); border-left: 4px solid var(--accent); }
+        .pl-thumb { width: 100px; aspect-ratio: 16/9; border-radius: 6px; object-fit: cover; }
+
+        .skeleton { background: var(--panel); position: relative; overflow: hidden; border-radius: 6px; }
+        .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+<header>
+    <a href="/" class="logo">YS</a>
+    <div class="search-container">
+        <form action="/search" method="GET" id="search-form">
+            <input type="text" name="q" id="search-input" class="search-input" placeholder="検索..." autocomplete="off">
+        </form>
+        <ul id="suggestions"></ul>
+    </div>
+</header>
+
 <div class="container">
     <div class="player-wrapper">
         <div id="video-viewport">
             <div id="loader" class="loading-overlay"><div class="spinner"></div></div>
             <video id="main-video" controls autoplay playsinline></video>
         </div>
+        <main class="main-info">
+            <h1 class="v-title" id="v-title"><div class="skeleton" style="width:70%; height:1.2em;"></div></h1>
+            <div id="q-bar" class="q-bar"></div>
+            <div class="author-row" id="author-click" style="display:flex; align-items:center; gap:12px; margin-bottom:15px; cursor:pointer;">
+                <img id="c-icon" src="" style="width:40px; height:40px; border-radius:50%; display:none;">
+                <span id="c-name" style="font-weight:bold;"></span>
+            </div>
+            <div id="v-desc" style="background:var(--panel); padding:12px; border-radius:10px; font-size:0.85rem; white-space:pre-wrap; margin-bottom:20px;"></div>
+            
+            <div id="comments-section">
+                <h3 style="font-size:1rem; border-bottom:1px solid var(--border); padding-bottom:10px;">Comments</h3>
+                <div id="comments-list"></div>
+            </div>
+        </main>
     </div>
-    <main class="main-info">
-        <h1 class="v-title" id="v-title"><div class="skeleton" style="width:70%; height:1.2em;"></div></h1>
-        <div id="q-bar" class="q-bar"></div>
-        <div class="author-row" id="author-click">
-            <div id="c-icon-placeholder" class="skeleton c-icon"></div>
-            <img id="c-icon" src="" class="c-icon" style="display:none;">
-            <div class="c-info"><span id="c-name" style="font-weight:bold;"><div class="skeleton" style="width:100px; height:1em;"></div></span></div>
-        </div>
-        <div id="v-desc" style="background:var(--panel); padding:12px; border-radius:10px; font-size:0.85rem; white-space:pre-wrap;"></div>
-    </main>
+
     <aside class="playlist-aside">
-        <div class="playlist-header">
+        <div style="padding:16px; background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border);">
             <h3 id="pl-title" style="margin:0; font-size:1rem;">Playlist</h3>
             <p id="pl-count" style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-sub);"></p>
         </div>
         <div class="playlist-list" id="playlist-list"></div>
     </aside>
 </div>
+
 <script>
     const vId = "{{ video_id }}";
     const plId = "{{ playlist_id }}";
     const video = document.getElementById('main-video');
     let nextVideoId = null;
 
+    // --- Time Skip Function ---
+    window.skipTo = (seconds) => {
+        video.currentTime = seconds;
+        video.play();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // --- Search & Suggest ---
+    const input = document.getElementById('search-input');
+    const suggList = document.getElementById('suggestions');
+    window.callback = (data) => {
+        const items = data[1] || [];
+        if (items.length > 0) {
+            suggList.innerHTML = items.map(t => `<li onclick="location.href='/search?q='+encodeURIComponent('${t}')">${t}</li>`).join('');
+            suggList.style.display = 'block';
+        } else { suggList.style.display = 'none'; }
+    };
+    input.addEventListener('input', () => {
+        const q = input.value.trim();
+        if (!q) { suggList.style.display = 'none'; return; }
+        const s = document.createElement('script');
+        s.src = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}&callback=callback`;
+        document.body.appendChild(s);
+        s.onload = () => s.remove();
+    });
+
+    // --- Format Comments & Timestamps ---
+    function formatComment(text) {
+        // 00:00 or 0:00 形式を検索
+        return text.replace(/(\d{1,2}:)?(\d{1,2}):(\d{2})/g, (match) => {
+            const parts = match.split(':').map(Number);
+            let seconds = 0;
+            if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+            else seconds = parts[0] * 60 + parts[1];
+            return `<span class="timestamp-link" onclick="skipTo(${seconds})">${match}</span>`;
+        });
+    }
+
     async function init() {
         try {
+            // Playlist API
             const plRes = await fetch(`/api/playlist/watch?v=${vId}&list=${plId}`);
             const plData = await plRes.json();
             document.getElementById('pl-title').innerText = plData.title;
@@ -109,16 +175,29 @@
                 if (active) item.scrollIntoView({ block: 'center' });
             });
 
+            // Video Details
             const detRes = await fetch(`/api/details/${vId}`);
             const detData = await detRes.json();
             document.getElementById('v-title').innerText = detData.title;
             document.getElementById('c-name').innerText = detData.author.name;
             document.getElementById('c-icon').src = detData.author.thumbnail;
             document.getElementById('c-icon').style.display = 'block';
-            document.getElementById('c-icon-placeholder').style.display = 'none';
-            document.getElementById('v-desc').innerText = detData.description.text;
+            document.getElementById('v-desc').innerHTML = formatComment(detData.description.text);
             document.getElementById('author-click').onclick = () => location.href = `/channel/${detData.author.id}`;
 
+            // Comments API
+            const cRes = await fetch(`/api/comments/${vId}`);
+            const comments = await cRes.json();
+            document.getElementById('comments-list').innerHTML = comments.map(c => `
+                <div style="display:flex; gap:12px; margin-bottom:16px;">
+                    <img src="${c.authoricon}" style="width:36px; height:36px; border-radius:50%;">
+                    <div>
+                        <div style="font-weight:bold; font-size:0.85rem;">${c.author}</div>
+                        <div style="font-size:0.9rem; color:#eee; margin-top:2px;">${formatComment(c.body)}</div>
+                    </div>
+                </div>`).join('');
+
+            // Stream API
             const sRes = await fetch(`/api/stream/${vId}`);
             const sData = await sRes.json();
             if (sData.formats) {
@@ -126,7 +205,6 @@
                 const vFmts = sData.formats.filter(f => f.resolution !== "audio only");
                 vFmts.forEach(f => {
                     const b = document.createElement('button');
-                    // CSSクラスを付与するように変更
                     b.className = 'q-btn' + (f.itag === "18" ? " active" : "");
                     b.innerText = f.resolution;
                     b.onclick = () => {
@@ -144,7 +222,7 @@
                 }
             }
             video.onended = () => { if (nextVideoId) location.href = `/watch?v=${nextVideoId}&list=${plId}`; };
-        } catch (e) { }
+        } catch (e) { console.error(e); }
     }
     init();
 </script>
