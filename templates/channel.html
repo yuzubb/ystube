@@ -13,6 +13,7 @@
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
             --shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+            --live-red: #ff0000;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: var(--bg); color: var(--text-main); font-family: "YouTube Sans", "Roboto", sans-serif; overflow-x: hidden; }
@@ -45,13 +46,18 @@
         .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 32px 16px; }
         .shorts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px 8px; }
 
-        .v-card { text-decoration: none; color: inherit; display: block; transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1); opacity: 0; transform: translateY(15px); }
+        .v-card { text-decoration: none; color: inherit; display: block; transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1); opacity: 0; transform: translateY(15px); position: relative; }
         .v-card.show { opacity: 1; transform: translateY(0); }
         .v-card:hover { transform: translateY(-4px); }
         
-        .v-thumb-wrap { width: 100%; aspect-ratio: 16/9; margin-bottom: 12px; border-radius: 12px; overflow: hidden; background: var(--panel); }
+        .v-thumb-wrap { width: 100%; aspect-ratio: 16/9; margin-bottom: 12px; border-radius: 12px; overflow: hidden; background: var(--panel); position: relative; }
         .s-thumb-wrap { aspect-ratio: 9/16; } 
         .v-thumb { width: 100%; height: 100%; object-fit: cover; transition: 0.4s; }
+        
+        /* ライブバッジ */
+        .live-badge { position: absolute; top: 8px; left: 8px; background: var(--live-red); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+        .live-badge::before { content: ""; width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         
         .v-title { font-size: 0.95rem; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px; color: #f1f1f1; }
         .v-meta { font-size: 0.8rem; color: var(--text-sub); }
@@ -80,11 +86,15 @@
 
         <div class="tab-bar">
             <button class="tab-btn active" onclick="switchTab('videos')">動画</button>
+            <button class="tab-btn" onclick="switchTab('live')">ライブ</button>
             <button class="tab-btn" onclick="switchTab('shorts')">ショート</button>
         </div>
 
         <div id="videos-section">
             <div class="video-grid" id="video-grid"></div>
+        </div>
+        <div id="live-section" style="display:none;">
+            <div class="video-grid" id="live-grid"></div>
         </div>
         <div id="shorts-section" style="display:none;">
             <div class="shorts-grid" id="shorts-grid"></div>
@@ -94,6 +104,7 @@
     <script>
         const chId = "{{ channel_id }}";
         let channelData = null;
+        let liveData = null;
         let shortsData = null;
 
         // 数値を「万」「億」に変換する関数
@@ -122,11 +133,16 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
 
+            document.getElementById('videos-section').style.display = 'none';
+            document.getElementById('live-section').style.display = 'none';
+            document.getElementById('shorts-section').style.display = 'none';
+
             if (tab === 'videos') {
                 document.getElementById('videos-section').style.display = 'block';
-                document.getElementById('shorts-section').style.display = 'none';
+            } else if (tab === 'live') {
+                document.getElementById('live-section').style.display = 'block';
+                if (!liveData) await loadLive();
             } else {
-                document.getElementById('videos-section').style.display = 'none';
                 document.getElementById('shorts-section').style.display = 'block';
                 if (!shortsData) await loadShorts();
             }
@@ -170,9 +186,34 @@
             } catch (e) { console.error(e); }
         }
 
+        async function loadLive() {
+            try {
+                const res = await fetch(`/api/channel/stream/${chId}`);
+                liveData = await res.json();
+                
+                const grid = document.getElementById('live-grid');
+                grid.innerHTML = liveData.streams.map((s, i) => `
+                    <a href="/watch?v=${s.id}" class="v-card" style="transition-delay: ${i * 0.05}s">
+                        <div class="v-thumb-wrap">
+                            ${s.is_live ? '<div class="live-badge">LIVE</div>' : ''}
+                            <img src="${s.thumbnail}" class="v-thumb" loading="lazy">
+                        </div>
+                        <div class="v-title">${s.title}</div>
+                        <div class="v-meta">
+                            ${s.is_live ? `${formatCount(s.view_count)} 人が視聴中` : `${formatCount(s.view_count)} 回視聴`}
+                        </div>
+                    </a>
+                `).join('');
+
+                setTimeout(() => {
+                    document.querySelectorAll('#live-grid .v-card').forEach(el => el.classList.add('show'));
+                }, 50);
+            } catch (e) { console.error(e); }
+        }
+
         async function loadShorts() {
             try {
-                const res = await fetch(`/api/channel/${chId}/shorts`);
+                const res = await fetch(`/api/short/${chId}`);
                 shortsData = await res.json();
                 
                 const grid = document.getElementById('shorts-grid');
