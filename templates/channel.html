@@ -24,7 +24,10 @@
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 1000; transition: opacity 0.6s ease; }
-        .spinner { width: 48px; height: 48px; position: relative; }
+        
+        /* コンテンツ内ローディング用スピナー */
+        .section-loader { display: none; width: 100%; padding: 40px 0; text-align: center; justify-content: center; }
+        .spinner { width: 48px; height: 48px; position: relative; margin: 0 auto; }
         .spinner::before, .spinner::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px solid transparent; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
         .spinner::after { border-top-color: rgba(0, 212, 255, 0.2); animation-delay: 0.1s; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -93,10 +96,14 @@
         <div id="videos-section">
             <div class="video-grid" id="video-grid"></div>
         </div>
+        
         <div id="live-section" style="display:none;">
+            <div id="live-loader" class="section-loader"><div class="spinner"></div></div>
             <div class="video-grid" id="live-grid"></div>
         </div>
+        
         <div id="shorts-section" style="display:none;">
+            <div id="shorts-loader" class="section-loader"><div class="spinner"></div></div>
             <div class="shorts-grid" id="shorts-grid"></div>
         </div>
     </div>
@@ -107,7 +114,6 @@
         let liveData = null;
         let shortsData = null;
 
-        // 数値を「万」「億」に変換する関数
         function formatCount(num) {
             if (!num || isNaN(num)) return "";
             const n = Number(num);
@@ -130,8 +136,9 @@
         }
 
         async function switchTab(tab) {
+            const btn = event.currentTarget;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+            btn.classList.add('active');
 
             document.getElementById('videos-section').style.display = 'none';
             document.getElementById('live-section').style.display = 'none';
@@ -141,10 +148,18 @@
                 document.getElementById('videos-section').style.display = 'block';
             } else if (tab === 'live') {
                 document.getElementById('live-section').style.display = 'block';
-                if (!liveData) await loadLive();
-            } else {
+                if (!liveData) {
+                    document.getElementById('live-loader').style.display = 'flex';
+                    await loadLive();
+                    document.getElementById('live-loader').style.display = 'none';
+                }
+            } else if (tab === 'shorts') {
                 document.getElementById('shorts-section').style.display = 'block';
-                if (!shortsData) await loadShorts();
+                if (!shortsData) {
+                    document.getElementById('shorts-loader').style.display = 'flex';
+                    await loadShorts();
+                    document.getElementById('shorts-loader').style.display = 'none';
+                }
             }
         }
 
@@ -154,14 +169,11 @@
                 channelData = await res.json();
 
                 document.getElementById('ch-name').innerText = channelData.name;
-                
-                // 登録者数のフォーマット表示
                 const subCountText = channelData.subscriber_count ? 
                                      `チャンネル登録者数 ${formatCount(channelData.subscriber_count)}人` : "";
                 document.getElementById('ch-sub-count').innerText = subCountText;
 
                 document.getElementById('ch-icon').src = channelData.icon || 'https://www.youtube.com/img/desktop/ftbc/default_avatar.png';
-                
                 document.getElementById('ch-icon').style.display = 'block';
                 document.getElementById('ch-icon-skel').style.display = 'none';
                 document.getElementById('ch-name-skel').style.display = 'none';
@@ -192,7 +204,7 @@
                 liveData = await res.json();
                 
                 const grid = document.getElementById('live-grid');
-                grid.innerHTML = liveData.streams.map((s, i) => `
+                grid.innerHTML = (liveData.streams || []).map((s, i) => `
                     <a href="/watch?v=${s.id}" class="v-card" style="transition-delay: ${i * 0.05}s">
                         <div class="v-thumb-wrap">
                             ${s.is_live ? '<div class="live-badge">LIVE</div>' : ''}
@@ -208,7 +220,10 @@
                 setTimeout(() => {
                     document.querySelectorAll('#live-grid .v-card').forEach(el => el.classList.add('show'));
                 }, 50);
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('live-grid').innerHTML = '<p style="text-align:center;color:var(--text-sub);">ライブ配信はありません</p>';
+            }
         }
 
         async function loadShorts() {
@@ -217,7 +232,7 @@
                 shortsData = await res.json();
                 
                 const grid = document.getElementById('shorts-grid');
-                grid.innerHTML = shortsData.shorts.map((s, i) => `
+                grid.innerHTML = (shortsData.shorts || []).map((s, i) => `
                     <a href="/watch?v=${s.id}" class="v-card" style="transition-delay: ${i * 0.03}s">
                         <div class="v-thumb-wrap s-thumb-wrap">
                             <img src="${s.thumbnail}" class="v-thumb" loading="lazy">
@@ -230,7 +245,10 @@
                 setTimeout(() => {
                     document.querySelectorAll('.shorts-grid .v-card').forEach(el => el.classList.add('show'));
                 }, 50);
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('shorts-grid').innerHTML = '<p style="text-align:center;color:var(--text-sub);">ショート動画はありません</p>';
+            }
         }
 
         loadChannel();
