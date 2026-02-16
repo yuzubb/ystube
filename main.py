@@ -203,6 +203,17 @@ async def api_get_channel_shorts(channel_id: str):
         except Exception as e:
             return JSONResponse(status_code=502, content={"error": "shorts api failed", "details": str(e)})
 
+@app.get("/api/short/{channel_id}")
+async def api_get_shorts(channel_id: str):
+    """ショート動画一覧を取得（短縮URL用）"""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            backend_url = f"https://yudlp.vercel.app/short/{channel_id}"
+            res = await client.get(backend_url)
+            return res.json()
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": "shorts api failed", "details": str(e)})
+
 @app.get("/api/channel/stream/{channel_id}")
 async def api_get_channel_streams(channel_id: str):
     """チャンネルのライブ配信・アーカイブ一覧を取得"""
