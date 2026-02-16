@@ -217,12 +217,20 @@ async def api_get_shorts(channel_id: str):
 @app.get("/api/channel/stream/{channel_id}")
 async def api_get_channel_streams(channel_id: str):
     """チャンネルのライブ配信・アーカイブ一覧を取得"""
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             backend_url = f"https://yudlp.vercel.app/channel/stream/{channel_id}"
+            print(f"Fetching streams from: {backend_url}")
             res = await client.get(backend_url)
-            return res.json()
+            res.raise_for_status()
+            data = res.json()
+            print(f"Streams data received: {len(data.get('streams', []))} items")
+            return data
+        except httpx.TimeoutException:
+            print(f"Timeout fetching streams for {channel_id}")
+            return JSONResponse(status_code=504, content={"error": "timeout", "details": "Request timed out"})
         except Exception as e:
+            print(f"Error fetching streams for {channel_id}: {e}")
             return JSONResponse(status_code=502, content={"error": "streams api failed", "details": str(e)})
 
 @app.get("/api/subtitles/{video_id}")
