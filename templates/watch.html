@@ -13,14 +13,12 @@
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
             --skeleton-bg: linear-gradient(90deg, #12151a 25%, #1d2129 50%, #12151a 75%);
-            /* デフォルトのパディング（JavaScriptで上書きも可能） */
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 
-        /* OSごとのフォント最適化 */
         body { 
             background: var(--bg); 
             color: var(--text-main); 
@@ -31,170 +29,217 @@
         body.is-ios { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         body.is-android { font-family: "Roboto", "Noto Sans JP", sans-serif; }
 
-        /* --- Skeleton --- */
+        /* スケルトンアニメーション */
         .skeleton {
             background: var(--skeleton-bg);
             background-size: 200% 100%;
             animation: skeleton-loading 1.5s infinite;
             border-radius: 4px;
             color: transparent !important;
+            border: none !important;
         }
         @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* --- Layout --- */
+        /* ヘッダー */
         header { 
             position: sticky; top: 0; z-index: 100; height: calc(56px + var(--safe-top));
-            padding-top: var(--safe-top);
+            padding: var(--safe-top) 15px 0;
             background: rgba(5, 7, 10, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            display: flex; align-items: center; padding-left: 15px; padding-right: 15px;
-            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; border-bottom: 1px solid var(--border);
         }
+        .logo { color: var(--accent); font-weight: 900; text-decoration: none; font-size: 1.4rem; flex-shrink: 0; }
+        .search-container { flex: 1; margin-left: 15px; }
+        .search-input { width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 6px 15px; color: white; outline: none; }
 
+        /* レイアウト構成 */
         .container { display: flex; flex-direction: column; }
-        
-        /* PC/タブレット向けのグリッドレイアウト */
         @media (min-width: 1024px) {
             .container { 
-                display: grid; 
-                grid-template-columns: 1fr 380px; 
-                gap: 24px; 
-                padding: 24px calc(20px + env(safe-area-inset-right)) 24px calc(20px + env(safe-area-inset-left));
-                max-width: 1800px; margin: 0 auto; 
+                display: grid; grid-template-columns: 1fr 380px; gap: 24px; 
+                padding: 24px; max-width: 1600px; margin: 0 auto; 
             }
         }
 
-        /* Video Viewport: モバイルでは上部に固定(Sticky) */
+        /* プレイヤーエリア */
         #video-viewport { 
             width: 100%; aspect-ratio: 16/9; background: #000; 
             position: sticky; top: calc(56px + var(--safe-top)); z-index: 50;
         }
-        @media (min-width: 1024px) {
-            #video-viewport { position: relative; top: 0; border-radius: 12px; overflow: hidden; }
-        }
-
+        @media (min-width: 1024px) { #video-viewport { position: relative; top: 0; border-radius: 12px; overflow: hidden; } }
         video { width: 100%; height: 100%; object-fit: contain; }
 
-        /* --- UI Components --- */
+        /* コンテンツ情報 */
         .main-info { padding: 15px; padding-bottom: calc(15px + var(--safe-bottom)); }
+        .v-title { font-size: 1.2rem; font-weight: bold; line-height: 1.4; margin-bottom: 12px; min-height: 1.4em; }
         
-        /* タッチデバイスならボタンを大きくする */
-        .is-touch .q-btn { padding: 10px 20px; font-size: 15px; }
+        .q-bar { display: flex; gap: 8px; margin: 12px 0; overflow-x: auto; padding-bottom: 5px; }
         .q-btn { 
             background: var(--panel); border: 1px solid var(--border); color: white; 
-            padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: 0.2s;
+            padding: 8px 16px; border-radius: 20px; font-size: 13px; white-space: nowrap; cursor: pointer;
         }
-        
-        .author-row { display: flex; align-items: center; gap: 12px; margin: 15px 0; }
-        .c-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--panel); flex-shrink: 0; }
+        .q-btn.active { background: #fff; color: #000; font-weight: bold; }
 
+        .author-row { display: flex; align-items: center; gap: 12px; margin: 15px 0; }
+        .c-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--panel); background-size: cover; flex-shrink: 0; }
+        .c-name { font-weight: bold; font-size: 1rem; }
+        .c-subs { font-size: 0.8rem; color: var(--text-sub); margin-top: 2px; }
+
+        .expand-box { background: var(--panel); border-radius: 12px; margin-top: 15px; overflow: hidden; }
+        .expand-head { padding: 12px 16px; display: flex; justify-content: space-between; font-size: 0.9rem; cursor: pointer; font-weight: bold; }
+        .expand-content { padding: 0 16px 16px; font-size: 0.85rem; display: none; white-space: pre-wrap; line-height: 1.5; }
+        .expand-content.open { display: block; }
+
+        /* 関連動画 */
         .related-item { display: flex; gap: 12px; margin-bottom: 16px; text-decoration: none; color: inherit; }
         .r-thumb { width: 150px; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; background: var(--panel); flex-shrink: 0; }
+        .r-title { font-size: 0.9rem; font-weight: 600; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .r-meta { font-size: 0.75rem; color: var(--text-sub); }
 
-        /* スクロールバーのカスタマイズ（PCのみ） */
+        /* スクロールバー（PC用） */
         @media (hover: hover) {
             ::-webkit-scrollbar { width: 8px; }
-            ::-webkit-scrollbar-track { background: var(--bg); }
-            ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-            ::-webkit-scrollbar-thumb:hover { background: #443; }
+            ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         }
     </style>
 </head>
-<body class="loading">
+<body>
 
-<header id="header">
-    <a href="/" style="color:var(--accent); font-weight:900; text-decoration:none; font-size:1.4rem;">YS</a>
-    <div style="flex:1; margin-left:15px;"><input type="search" class="skeleton" style="width:100%; height:36px; border-radius:18px; border:none;"></div>
+<header>
+    <a href="/" class="logo">YS</a>
+    <div class="search-container">
+        <input type="search" class="search-input" placeholder="検索...">
+    </div>
 </header>
 
 <div class="container">
     <div class="player-wrapper">
         <div id="video-viewport" class="skeleton">
-            <video id="main-video" playsinline controls></video>
+            <video id="main-video" playsinline controls autoplay></video>
         </div>
 
         <main class="main-info">
-            <div id="v-title" class="skeleton" style="height:1.4rem; width:80%; margin-bottom:15px;"></div>
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <div class="q-btn skeleton" style="width:60px; height:34px;"></div>
-                <div class="q-btn skeleton" style="width:60px; height:34px;"></div>
+            <h1 id="v-title" class="v-title skeleton">Loading Title...</h1>
+            
+            <div id="q-bar" class="q-bar">
+                <div class="q-btn skeleton" style="width:60px; height:32px;"></div>
+                <div class="q-btn skeleton" style="width:60px; height:32px;"></div>
             </div>
+
             <div class="author-row">
-                <div class="c-icon skeleton"></div>
-                <div style="flex:1;">
-                    <div class="skeleton" style="height:1rem; width:120px; margin-bottom:5px;"></div>
-                    <div class="skeleton" style="height:0.8rem; width:80px;"></div>
+                <div id="c-icon" class="c-icon skeleton"></div>
+                <div>
+                    <div id="c-name" class="c-name skeleton" style="width:120px; height:1.1rem;"></div>
+                    <div id="c-subs" class="c-subs skeleton" style="width:80px; height:0.8rem; margin-top:5px;"></div>
                 </div>
+            </div>
+
+            <div class="expand-box">
+                <div class="expand-head" onclick="document.getElementById('v-desc').classList.toggle('open')">
+                    概要欄 <span>▼</span>
+                </div>
+                <div id="v-desc" class="expand-content skeleton" style="height:60px; margin:10px;"></div>
             </div>
         </main>
     </div>
 
-    <aside id="related-box" style="padding:15px;">
-        <div class="related-item"><div class="r-thumb skeleton"></div><div style="flex:1;"><div class="skeleton" style="height:1rem; margin-bottom:8px;"></div><div class="skeleton" style="height:0.8rem; width:50%;"></div></div></div>
-        <div class="related-item"><div class="r-thumb skeleton"></div><div style="flex:1;"><div class="skeleton" style="height:1rem; margin-bottom:8px;"></div><div class="skeleton" style="height:0.8rem; width:50%;"></div></div></div>
-        <div class="related-item"><div class="r-thumb skeleton"></div><div style="flex:1;"><div class="skeleton" style="height:1rem; margin-bottom:8px;"></div><div class="skeleton" style="height:0.8rem; width:50%;"></div></div></div>
+    <aside id="related-box" style="padding: 15px;">
+        <div class="related-item"><div class="r-thumb skeleton"></div><div style="flex:1;"><div class="skeleton" style="height:1.2rem; margin-bottom:8px;"></div><div class="skeleton" style="height:0.8rem; width:50%;"></div></div></div>
+        <div class="related-item"><div class="r-thumb skeleton"></div><div style="flex:1;"><div class="skeleton" style="height:1.2rem; margin-bottom:8px;"></div><div class="skeleton" style="height:0.8rem; width:50%;"></div></div></div>
     </aside>
 </div>
 
 <script>
-    /**
-     * 1. 端末情報の取得とクラス付与
-     */
+    const vId = "{{ video_id }}";
+    const video = document.getElementById('main-video');
+
     function detectDevice() {
         const ua = navigator.userAgent.toLowerCase();
-        const body = document.body;
-        
-        // OS判定
-        if (ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) {
-            body.classList.add('is-ios');
-        } else if (ua.indexOf('android') > -1) {
-            body.classList.add('is-android');
-        }
-
-        // タッチパネル判定
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            body.classList.add('is-touch');
-        } else {
-            body.classList.add('is-desktop');
-        }
+        if (ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) document.body.classList.add('is-ios');
+        if (ua.indexOf('android') > -1) document.body.classList.add('is-android');
     }
 
-    /**
-     * 2. データ読み込みとスケルトン解除
-     */
-    async function loadData() {
-        const vId = "{{ video_id }}";
-        
+    async function init() {
+        detectDevice();
         try {
-            // 例: APIフェッチ（実際にはバックエンドのパスに合わせてください）
+            // 1. 基本情報の取得
             const res = await fetch(`/api/details/${vId}`);
             const data = await res.json();
 
-            // 反映とスケルトン除去
+            // タイトル
             const titleEl = document.getElementById('v-title');
             titleEl.innerText = data.title;
             titleEl.classList.remove('skeleton');
-            titleEl.style.height = 'auto';
 
-            // 他の要素も同様に反映...
-            // (前回のコードの反映ロジックをここに統合)
+            // チャンネル情報
+            const cName = document.getElementById('c-name');
+            cName.innerText = data.author.name;
+            cName.classList.remove('skeleton');
 
-            // ビデオURL設定
+            const cSubs = document.getElementById('c-subs');
+            cSubs.innerText = data.author.subscribers;
+            cSubs.classList.remove('skeleton');
+
+            const cIcon = document.getElementById('c-icon');
+            if (data.author.thumbnail) {
+                cIcon.style.backgroundImage = `url(${data.author.thumbnail})`;
+            }
+            cIcon.classList.remove('skeleton');
+
+            // 概要欄
+            const vDesc = document.getElementById('v-desc');
+            vDesc.innerText = data.description.text;
+            vDesc.classList.remove('skeleton');
+
+            // 2. ストリーム（画質ボタン）の取得
             const sRes = await fetch(`/api/stream/${vId}`);
             const sData = await sRes.json();
-            const video = document.getElementById('main-video');
-            video.src = sData.formats.find(f => f.itag == 18).url;
-            video.onloadeddata = () => {
-                document.getElementById('video-viewport').classList.remove('skeleton');
-            };
+            const qBar = document.getElementById('q-bar');
+            qBar.innerHTML = ''; 
+
+            const formats = sData.formats.filter(f => f.resolution || f.qualityLabel);
+            formats.forEach((f, idx) => {
+                const b = document.createElement('button');
+                b.className = 'q-btn' + (f.itag == 18 ? ' active' : '');
+                b.innerText = f.resolution || f.qualityLabel;
+                b.onclick = () => {
+                    const t = video.currentTime;
+                    document.querySelectorAll('.q-btn').forEach(btn => btn.classList.remove('active'));
+                    b.classList.add('active');
+                    video.src = f.url;
+                    video.currentTime = t;
+                    video.play();
+                };
+                qBar.appendChild(b);
+            });
+
+            const initialVideo = formats.find(f => f.itag == 18) || formats[0];
+            if (initialVideo) {
+                video.src = initialVideo.url;
+                video.onloadeddata = () => {
+                    document.getElementById('video-viewport').classList.remove('skeleton');
+                };
+            }
+
+            // 3. 関連動画
+            if (data["Related-videos"]) {
+                const rb = document.getElementById('related-box');
+                rb.innerHTML = data["Related-videos"].relatedVideos.map(rv => `
+                    <a href="/watch?v=${rv.videoId}" class="related-item">
+                        <img src="${rv.thumbnail}" class="r-thumb" loading="lazy">
+                        <div style="flex:1;">
+                            <div class="r-title">${rv.title}</div>
+                            <div class="r-meta">${rv.channelName || 'YouTube'}</div>
+                        </div>
+                    </a>
+                `).join('');
+            }
 
         } catch (e) {
-            console.error("Load failed", e);
+            console.error("Initialization failed:", e);
         }
     }
 
-    // 実行
-    detectDevice();
-    loadData();
+    init();
 </script>
 </body>
 </html>
